@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Public_Sans } from 'next/font/google';
+import TaskManager from '../components/TaskManager';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
@@ -9,6 +10,7 @@ const public_sans = Public_Sans({
 const TodayPage = () => {
   const [userTask, setUserTask] = useState("");
   const [list, setList] = useState<{ task: string; completed: boolean }[]>([]);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
 
   const handleAddTask = () => {
     if (userTask.trim()) {
@@ -35,8 +37,16 @@ const TodayPage = () => {
     );
   };
 
+  const handleTaskClick = (task: string) => {
+    setSelectedTask(task);
+  };
+
+  const handleCloseTaskManager = () => {
+    setSelectedTask(null);
+  };
+
   return (
-    <div className={`flex flex-col text-black ${public_sans.className} px-4`}>
+    <div className={`flex flex-col text-black ${public_sans.className} px-4 ${selectedTask ? 'w-2/3' : 'w-full'}`}>
       <h1 className="font-bold text-[40px]">Today</h1>
       <div className="flex items-center border border-gray-300 px-2 py-1 mt-[1.5rem] rounded-lg">
         <img
@@ -58,7 +68,8 @@ const TodayPage = () => {
         {list.map((item, index) => (
           <li
             key={index}
-            className="flex items-center gap-3 border-b border-gray-300 py-2  hover:cursor-pointer"
+            className="flex items-center gap-3 border-b border-gray-300 py-2 hover:cursor-pointer"
+            onClick={() => handleTaskClick(item.task)}
           >
             <input
               type="checkbox"
@@ -81,6 +92,10 @@ const TodayPage = () => {
           </li>
         ))}
       </ul>
+
+      {selectedTask && (
+        <TaskManager taskName={selectedTask} onClose={handleCloseTaskManager} />
+      )}
     </div>
   );
 };

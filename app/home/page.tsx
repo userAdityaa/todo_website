@@ -33,8 +33,6 @@ const Home = () => {
 
   return (
     <div className='bg-white h-[100vh] w-[100vw]'>
-
-
         {open && 
         <div className='bg-gray-100 h-[95vh] w-[22vw] rounded-xl absolute top-5 left-5'>
             <div className='flex items-center justify-between w-[90%] mx-auto mt-2'>
@@ -51,7 +49,9 @@ const Home = () => {
             </div>
 
             <div>
+            
               <p className='text-zinc-700 text-[15px] mt-[1rem] w-[90%] mx-auto font-bold'>Tasks</p>
+                
 
               <ul className='flex flex-col gap-4 text-zinc-500 mx-auto w-[90%] mt-[1rem]'>
               <button className='flex items-center font-semibold gap-4'><Image src = '/images/upcoming.svg' alt='upcoming icon' height={30} width={15}></Image>Upcoming</button>
@@ -91,7 +91,7 @@ const Home = () => {
             
         </div>}
 
-        <div className={`w-[${width}] ml-auto flex items-center justify-center h-[100vh]`}>
+        <div className={`w-[68rem] ml-auto flex items-center justify-center h-[100vh]`}>
           <div className='h-[95%] w-full'>
             {renderContent()}
           </div>
