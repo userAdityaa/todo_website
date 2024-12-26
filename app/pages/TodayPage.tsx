@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
+import axios from 'axios';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
@@ -9,16 +10,49 @@ const public_sans = Public_Sans({
 
 const TodayPage = () => {
   const [userTask, setUserTask] = useState("");
-  const [list, setList] = useState<{ task: string; completed: boolean }[]>([]);
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [list, setList] = useState<{ id: string; name: string; completed: boolean }[]>([]);
+  const [selectedTask, setSelectedTask] = useState<{ id: string; name: string } | null>(null);
 
-  const handleAddTask = () => {
+  const fetchTasks = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/all-todo');
+      setList(response.data.map((task: any) => ({
+        ...task,
+        completed: task.completed ?? false, // Ensure completed is always defined
+      })));
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const handleAddTask = async () => {
     if (userTask.trim()) {
-      setList((prevList) => [
-        ...prevList,
-        { task: userTask.trim(), completed: false },
-      ]);
-      setUserTask("");
+      try {
+        const response = await axios.post('http://localhost:8000/create-todo', {
+          name: userTask.trim()
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        const newTask = {
+          id: response.data.id, 
+          name: userTask.trim(), 
+          completed: false,
+        }
+        setList((prevList) => [
+          ...prevList,
+          newTask,
+        ]);
+        fetchTasks();
+        setUserTask("");
+      } catch (error) {
+        console.error("Error creating task:", error);
+      }
     }
   };
 
@@ -37,7 +71,7 @@ const TodayPage = () => {
     );
   };
 
-  const handleTaskClick = (task: string) => {
+  const handleTaskClick = (task: { id: string; name: string }) => {
     setSelectedTask(task);
   };
 
@@ -68,8 +102,7 @@ const TodayPage = () => {
         {list.map((item, index) => (
           <li
             key={index}
-            className="flex items-center gap-3 border-b border-gray-300 py-2 hover:cursor-pointer"
-            onClick={() => handleTaskClick(item.task)}
+            className="flex items-center gap-3 border-b border-gray-300 py-2"
           >
             <input
               type="checkbox"
@@ -79,22 +112,23 @@ const TodayPage = () => {
             />
             <span
               className={`flex-grow ${
-                item.completed ? "line-through text-gray-500" : ""
+                item.completed ? "line-through text-gray-500" : "text-gray-500"
               }`}
             >
-              {item.task}
+              {item.name}
             </span>
             <img
               src="/images/arrow_right.svg"
               alt="More details"
               className="w-4 h-4 cursor-pointer"
+              onClick={() => handleTaskClick({ id: item.id, name: item.name })}
             />
           </li>
         ))}
       </ul>
 
       {selectedTask && (
-        <TaskManager taskName={selectedTask} onClose={handleCloseTaskManager} />
+        <TaskManager taskName={selectedTask.name} onClose={handleCloseTaskManager} taskId={selectedTask.id} />
       )}
     </div>
   );
