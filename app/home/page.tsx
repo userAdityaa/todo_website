@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { TodayPage } from '../pages';
+import { TodayPage, UpcomingTask } from '../pages';
 
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
@@ -14,7 +14,7 @@ const Home = () => {
   const renderContent = () => {
     switch (selectedMenuItem) {
       case 'Upcoming':
-        return <div className='h-[95%] w-full border border-black'>Upcoming content</div>;
+        return <UpcomingTask />;
       case 'Today':
         return <TodayPage />;
       case 'Calendar':
@@ -34,7 +34,7 @@ const Home = () => {
   ];
 
   return (
-    <div className='bg-white h-screen w-screen flex'>
+    <div className='bg-white h-screen w-screen flex overflow-hidden'>
       <button 
         className={`
           absolute z-50 transition-all duration-300
