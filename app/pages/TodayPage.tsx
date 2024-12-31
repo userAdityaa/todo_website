@@ -127,7 +127,7 @@ const TodayPage = () => {
       </div>
       
       <div className="mt-4 overflow-y-auto flex-1">
-        <ul className="space-y-4">
+        <ul className="space-y-4 last:py-10">
           {list.map((item, index) => (
             <li
               key={index}
