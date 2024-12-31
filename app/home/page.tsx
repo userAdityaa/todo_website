@@ -1,7 +1,8 @@
 'use client'
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { TodayPage, UpcomingTask } from '../pages';
+import { CalendarPage, TodayPage, UpcomingTask } from '../pages';
+import StickyWall from '../pages/StickWall';
 
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
@@ -18,9 +19,9 @@ const Home = () => {
       case 'Today':
         return <TodayPage />;
       case 'Calendar':
-        return <div className='h-[95%] w-full border border-black'>Calendar content</div>;
+        return <CalendarPage/>;
       case 'Sticky Notes':
-        return <div className='h-[95%] w-full border border-black'>Sticky Notes content</div>;
+        return <StickyWall/>;
       default:
         return null;
     }
