@@ -3,6 +3,7 @@ import React from 'react'
 import Image from 'next/image';
 import { Shanti } from "next/font/google";
 import axios from 'axios'
+import { useRouter } from 'next/navigation';
 
 const shanti = Shanti({
   subsets: ['latin'], 
@@ -11,13 +12,16 @@ const shanti = Shanti({
 
 const Auth = () => {
 
+  const router = useRouter();
+
   const handleLoginIn = async () => { 
     try {
       window.location.href = "http://localhost:8000/auth/google/login";
     } catch (error) {
       console.error('Error during login:', error);
     }
-  }
+  };
+  
 
   return (
     <div className={`bg-white flex items-center justify-center h-[100vh] w-[100vw] ${shanti.className} font-bold`}>
