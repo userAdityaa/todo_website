@@ -2,23 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
 import axios from 'axios';
-import { Todo } from '../home/page';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
   weight: '400',
 });
 
+interface Todo {
+  id: string;
+  name: string;
+  description: string;
+  list: string;
+  due_date: string;
+  sub_task: string[];
+  completed?: boolean;
+}
+
 interface TaskProps { 
   task: Todo[];
 }
 
-
 const TodayPage = ({task}: TaskProps) => {
   const [userTask, setUserTask] = useState("");
   const [list, setList] = useState<Todo[]>([]);
-  const [selectedTask, setSelectedTask] = useState<{ id: string; name: string } | null>(null);
-
+  const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
 
   const toggleTaskCompletion = async (index: number) => {
     const updatedList = list.map((item, i) =>
@@ -61,6 +68,8 @@ const TodayPage = ({task}: TaskProps) => {
           }
         });
         
+        const newTask: Todo = response.data;
+        setList([...list, newTask]);
         setUserTask("");
       } catch (error) {
         console.error("Error creating task:", error);
@@ -75,7 +84,7 @@ const TodayPage = ({task}: TaskProps) => {
     }
   };
   
-  const handleTaskClick = (task: { id: string; name: string }) => {
+  const handleTaskClick = (task: Todo) => {
     setSelectedTask(task);
   };
 
@@ -94,16 +103,17 @@ const TodayPage = ({task}: TaskProps) => {
     }
   };
 
-  const formatDueDate = (date: string) => {
-    switch (date.toLowerCase()) {
-      case 'today':
-        return 'Today';
-      case 'tomorrow':
-        return 'Tomorrow';
-      case 'next_week':
-        return 'Next Week';
-      default:
-        return date;
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return dateString;
     }
   };
 
@@ -170,7 +180,7 @@ const TodayPage = ({task}: TaskProps) => {
                           alt="Due date"
                           className="w-4 h-4"
                         />
-                        {formatDueDate(item.due_date)}
+                        {formatDate(item.due_date)}
                       </div>
                     )}
                     
@@ -191,7 +201,7 @@ const TodayPage = ({task}: TaskProps) => {
                   src="/images/arrow_right.svg"
                   alt="More details"
                   className="w-4 h-4 cursor-pointer"
-                  onClick={() => handleTaskClick({ id: item.id, name: item.name })}
+                  onClick={() => handleTaskClick(item)}
                 />
               </div>
             </li>
@@ -201,9 +211,8 @@ const TodayPage = ({task}: TaskProps) => {
       
       {selectedTask && (
         <TaskManager 
-          taskName={selectedTask.name} 
+          todo={selectedTask}
           onClose={handleCloseTaskManager} 
-          taskId={selectedTask.id} 
         />
       )}
     </div>
