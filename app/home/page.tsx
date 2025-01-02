@@ -5,9 +5,12 @@ import { CalendarPage, TodayPage, UpcomingTask } from '../pages';
 import StickyWall from '../pages/StickWall';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Cookie from 'js-cookie'
+import axios from 'axios';
 
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+  const [userName, setUserName] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
   const [selectedMenuItem, setSelectedMenuItem] = useState('Today');
   const [lists, setLists] = useState([
     { name: 'Personal', color: 'bg-red-300', count: 3 },
@@ -43,6 +46,25 @@ const Home = () => {
     };
     
     handleGoogleAuthRedirect();
+
+    const getUserData = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get("http://localhost:8000/auth/user", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log(response.data);
+        return response.data;
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        throw error;
+      }
+    };
+
+    getUserData();
   })
 
   const handleAddList = () => {
