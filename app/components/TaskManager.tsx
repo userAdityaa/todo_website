@@ -23,23 +23,24 @@ const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) 
   const router = useRouter();
 
   const handleSaveChanges = async () => {
-    // try {
-    //   console.log(subtasks);
-    //   await axios.put(`http://localhost:8000/update-todo/${taskId}`, {
-    //     name: taskName,
-    //     description: description,
-    //     list: selectedList,
-    //     due_date: dueDate,
-    //     sub_task: subtasks,
-    //   }, {
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     }
-    //   });
-    //   onClose();
-    // } catch (error) {
-    //   console.error("Error updating task:", error);
-    // }
+    try {
+      const token = localStorage.getItem('authToken');
+      await axios.put(`http://localhost:8000/update-todo/${taskId}`, {
+        name: taskName,
+        description: description,
+        list: selectedList,
+        due_date: dueDate,
+        sub_task: subtasks,
+      }, {
+        headers: {
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}` 
+        }
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
   };
 
   const handleSubtaskChange = (index: number, value: string) => {
