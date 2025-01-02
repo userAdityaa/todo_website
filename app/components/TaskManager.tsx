@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import { Public_Sans } from 'next/font/google';
-import Image from 'next/image'
+import Image from 'next/image';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
@@ -9,32 +9,46 @@ const public_sans = Public_Sans({
   weight: '400',
 });
 
-interface TaskManagerProps {
-  taskName: string;
-  onClose: () => void;
-  taskId: string;
+interface Todo {
+  id: string;
+  name: string;
+  description: string;
+  list: string;
+  due_date: string;
+  sub_task: string[];
+  completed?: boolean;
 }
 
-const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) => {
-  const [description, setDescription] = useState('');
-  const [selectedList, setSelectedList] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [subtasks, setSubtasks] = useState<string[]>(['']);
+interface TaskManagerProps {
+  todo: Todo;
+  onClose: () => void;
+}
+
+const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
+  const [description, setDescription] = useState(todo.description);
+  const [selectedList, setSelectedList] = useState(todo.list);
+  const [dueDate, setDueDate] = useState(todo.due_date.split('T')[0] || '');
+  const [dueTime, setDueTime] = useState(todo.due_date.split('T')[1] || '');
+  const [subtasks, setSubtasks] = useState<string[]>(todo.sub_task);
   const router = useRouter();
 
   const handleSaveChanges = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      await axios.put(`http://localhost:8000/update-todo/${taskId}`, {
-        name: taskName,
-        description: description,
+      const combinedDateTime = dueDate && dueTime 
+        ? `${dueDate}T${dueTime}` 
+        : '';
+
+      await axios.put(`http://localhost:8000/update-todo/${todo.id}`, {
+        name: todo.name,
+        description,
         list: selectedList,
-        due_date: dueDate,
+        due_date: combinedDateTime,
         sub_task: subtasks,
       }, {
         headers: {
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${token}` 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       onClose();
@@ -55,9 +69,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) 
 
   const handleDeleteTask = async () => {
     const token = localStorage.getItem('authToken');
-    console.log(token);
     try {
-      await axios.delete(`http://localhost:8000/delete-todo/${taskId}`, {
+      await axios.delete(`http://localhost:8000/delete-todo/${todo.id}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -85,11 +98,10 @@ const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) 
           />
         </div>
 
-        {/* Scrollable content area */}
         <div className='flex-1 overflow-y-auto'>
           <input
             type="text"
-            value={taskName}
+            value={todo.name}
             className="mt-2 p-2 border rounded-lg w-full"
             readOnly
           />
@@ -115,22 +127,24 @@ const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) 
             </select>
           </div>
 
-          <div className='flex items-center mt-4'>
-            <label className='mr-2'>Due Date:</label>
-            <select
+          <div className='flex flex-col gap-2 mt-4'>
+            <label>Due Date & Time:</label>
+            <input
+              type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               className="p-2 border rounded-lg"
-            >
-              <option value="">Select a due date</option>
-              <option value="today">Today</option>
-              <option value="tomorrow">Tomorrow</option>
-              <option value="next_week">Next Week</option>
-            </select>
+            />
+            <input
+              type="time"
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
+              className="p-2 border rounded-lg"
+            />
           </div>
 
           <div className='mt-4'>
-          <h2 className='font-bold text-[20px]'>Subtasks:</h2>
+            <h2 className='font-bold text-[20px]'>Subtasks:</h2>
             {subtasks.map((subtask, index) => (
               <input
                 key={index}
@@ -149,8 +163,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) 
             </button>
           </div>
         </div>
-
-        {/* Fixed button area */}
+        
         <div className='flex justify-between mt-4 pt-4 border-t border-gray-200'>
           <button
             onClick={handleDeleteTask}
