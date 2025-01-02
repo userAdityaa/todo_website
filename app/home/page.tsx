@@ -7,10 +7,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import Cookie from 'js-cookie'
 import axios from 'axios';
 
+export interface Todo { 
+  id: string; 
+  name: string; 
+  description: string;
+  list: string;
+  due_date: string;
+  sub_task: string[];
+  completed?: boolean;
+}
+
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const [userName, setUserName] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
+  const [list, setList] = useState<Todo[]>([]);
   const [selectedMenuItem, setSelectedMenuItem] = useState('Today');
   const [lists, setLists] = useState([
     { name: 'Personal', color: 'bg-red-300', count: 3 },
@@ -30,8 +41,6 @@ const Home = () => {
     'bg-purple-300', 'bg-pink-300', 'bg-indigo-300', 'bg-cyan-300'
   ];
 
-
-  
   useEffect(() => { 
     const handleGoogleAuthRedirect = () => {
       const params = new URLSearchParams(window.location.search);
@@ -55,9 +64,15 @@ const Home = () => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
+          withCredentials: true,
         });
-        console.log(response.data);
-        return response.data;
+
+        if(response.data.todos != null){
+          setList(response.data.todos.map((todo: Todo) => ({ 
+            ...todo, 
+            completed: false,
+          })));
+        } 
       } catch (error) {
         console.error("Error fetching user data:", error);
         throw error;
@@ -97,7 +112,7 @@ const Home = () => {
       case 'Upcoming':
         return <UpcomingTask />;
       case 'Today':
-        return <TodayPage />;
+        return <TodayPage task = {list}/>;
       case 'Calendar':
         return <CalendarPage />;
       case 'Sticky Wall':
@@ -116,7 +131,6 @@ const Home = () => {
 
   return (
     <div className="bg-white h-screen w-screen flex overflow-hidden">
-      {/* List Creation Dialog */}
       <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
         <DialogContent>
           <DialogHeader>

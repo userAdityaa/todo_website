@@ -2,55 +2,51 @@ import React, { useEffect, useState } from 'react';
 import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
 import axios from 'axios';
+import { Todo } from '../home/page';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
   weight: '400',
 });
 
-interface Task {
-  id: string;
-  name: string;
-  description: string;
-  list: string;
-  due_date: string;
-  sub_task: string[];
-  completed?: boolean;
+interface TaskProps { 
+  task: Todo[];
 }
 
-const TodayPage = () => {
+
+const TodayPage = ({task}: TaskProps) => {
   const [userTask, setUserTask] = useState("");
-  const [list, setList] = useState<Task[]>([]);
+  const [list, setList] = useState<Todo[]>([]);
   const [selectedTask, setSelectedTask] = useState<{ id: string; name: string } | null>(null);
 
-  const fetchTasks = async () => {
-    try {
-      const response = await axios.get('http://localhost:8000/all-todo');
-      setList(response.data.map((task: Task) => ({
-        ...task,
-        completed: false
-      })));
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-    }
-  };
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  const toggleTaskCompletion = (index: number) => {
+    setList((prevList) =>
+      prevList.map((item, i) =>
+        i === index ? { ...item, completed: !item.completed } : item
+      )
+    );
+  }
+
+  useEffect(() => { 
+    if(task) { 
+      setList(task);
+    }
+  })
 
   const handleAddTask = async () => {
     if (userTask.trim()) {
       try {
+        const token = localStorage.getItem('authToken');
         const response = await axios.post('http://localhost:8000/create-todo', {
           name: userTask.trim()
         }, {
           headers: {
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
         
-        await fetchTasks();
         setUserTask("");
       } catch (error) {
         console.error("Error creating task:", error);
@@ -64,22 +60,13 @@ const TodayPage = () => {
       handleAddTask();
     }
   };
-
-  const toggleTaskCompletion = (index: number) => {
-    setList((prevList) =>
-      prevList.map((item, i) =>
-        i === index ? { ...item, completed: !item.completed } : item
-      )
-    );
-  };
-
+  
   const handleTaskClick = (task: { id: string; name: string }) => {
     setSelectedTask(task);
   };
 
   const handleCloseTaskManager = () => {
     setSelectedTask(null);
-    fetchTasks(); 
   };
 
   const getListColor = (listName: string) => {
@@ -143,7 +130,7 @@ const TodayPage = () => {
                   />
                 </div>
                 
-                <div className="flex-grow min-w-0"> {/* Added min-w-0 to enable text truncation */}
+                <div className="flex-grow min-w-0"> 
                   <div className="flex items-center gap-2">
                     <span className={`text-lg truncate ${item.completed ? "line-through text-gray-500" : ""}`}>
                       {item.name}
