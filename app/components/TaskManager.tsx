@@ -23,23 +23,23 @@ const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) 
   const router = useRouter();
 
   const handleSaveChanges = async () => {
-    try {
-      console.log(subtasks);
-      await axios.put(`http://localhost:8000/update-todo/${taskId}`, {
-        name: taskName,
-        description: description,
-        list: selectedList,
-        due_date: dueDate,
-        sub_task: subtasks,
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      onClose();
-    } catch (error) {
-      console.error("Error updating task:", error);
-    }
+    // try {
+    //   console.log(subtasks);
+    //   await axios.put(`http://localhost:8000/update-todo/${taskId}`, {
+    //     name: taskName,
+    //     description: description,
+    //     list: selectedList,
+    //     due_date: dueDate,
+    //     sub_task: subtasks,
+    //   }, {
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     }
+    //   });
+    //   onClose();
+    // } catch (error) {
+    //   console.error("Error updating task:", error);
+    // }
   };
 
   const handleSubtaskChange = (index: number, value: string) => {
@@ -53,10 +53,13 @@ const TaskManager: React.FC<TaskManagerProps> = ({ taskName, onClose, taskId }) 
   };
 
   const handleDeleteTask = async () => {
+    const token = localStorage.getItem('authToken');
+    console.log(token);
     try {
       await axios.delete(`http://localhost:8000/delete-todo/${taskId}`, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       onClose();
