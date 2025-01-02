@@ -1,9 +1,10 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { CalendarPage, TodayPage, UpcomingTask } from '../pages';
 import StickyWall from '../pages/StickWall';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import Cookie from 'js-cookie'
 
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
@@ -25,6 +26,24 @@ const Home = () => {
     'bg-red-300', 'bg-blue-300', 'bg-green-300', 'bg-yellow-300', 
     'bg-purple-300', 'bg-pink-300', 'bg-indigo-300', 'bg-cyan-300'
   ];
+
+
+  
+  useEffect(() => { 
+    const handleGoogleAuthRedirect = () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+    
+      if (token) {
+        localStorage.setItem('authToken', token);
+        console.log('Authentication successful:', token);
+      } else {
+        console.error('Token not found in redirect URL');
+      }
+    };
+    
+    handleGoogleAuthRedirect();
+  })
 
   const handleAddList = () => {
     if (newListName.trim()) {
