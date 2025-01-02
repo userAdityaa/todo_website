@@ -48,10 +48,7 @@ const Home = () => {
     
       if (token) {
         localStorage.setItem('authToken', token);
-        console.log('Authentication successful:', token);
-      } else {
-        console.error('Token not found in redirect URL');
-      }
+      } 
     };
     
     handleGoogleAuthRedirect();
@@ -179,7 +176,6 @@ const Home = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Tag Creation Dialog */}
       <Dialog open={isTagDialogOpen} onOpenChange={setIsTagDialogOpen}>
         <DialogContent>
           <DialogHeader>

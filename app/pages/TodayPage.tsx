@@ -20,19 +20,33 @@ const TodayPage = ({task}: TaskProps) => {
   const [selectedTask, setSelectedTask] = useState<{ id: string; name: string } | null>(null);
 
 
-  const toggleTaskCompletion = (index: number) => {
-    setList((prevList) =>
-      prevList.map((item, i) =>
-        i === index ? { ...item, completed: !item.completed } : item
-      )
+  const toggleTaskCompletion = async (index: number) => {
+    const updatedList = list.map((item, i) =>
+      i === index ? { ...item, completed: !item.completed } : item
     );
-  }
+    setList(updatedList);
+
+    const task = updatedList[index];
+    if (task.completed) {
+      try {
+        const token = localStorage.getItem('authToken');
+        await axios.delete(`http://localhost:8000/delete-todo/${task.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (error) {
+        console.error("Error deleting task:", error);
+      }
+    }
+  };
 
   useEffect(() => { 
     if(task) { 
       setList(task);
     }
-  })
+  }, [task]);
 
   const handleAddTask = async () => {
     if (userTask.trim()) {
