@@ -18,9 +18,7 @@ const getRandomPastelColor = () => {
   return `hsl(${hue}, 70%, 90%)`;
 };
 
-const defaultNotes: TodoNote[] = [
-
-];
+const defaultNotes: TodoNote[] = [];
 
 const AutoResizeTextArea = ({ value, onChange, className }: { 
   value: string; 
@@ -50,14 +48,43 @@ const AutoResizeTextArea = ({ value, onChange, className }: {
 const StickyWall: React.FC<Props> = ({ initialNotes = defaultNotes }) => {
   const [notes, setNotes] = useState<TodoNote[]>(initialNotes);
 
-  const addNote = () => {
+  const sendStickyToServer = async (newNote: TodoNote) => {
+    try {
+      const response = await fetch('http://localhost:8000/create-sticky', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify({
+          topic: newNote.title,
+          content: newNote.content.join('\n'),
+          color: newNote.color,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create sticky: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Sticky created successfully:', data);
+    } catch (error) {
+      console.error('Error creating sticky:', error);
+    }
+  };
+
+  const addNote = async () => {
     const newNote: TodoNote = {
       id: Date.now().toString(),
       title: 'New Note',
       content: ['Add your content here'],
-      color: getRandomPastelColor()
+      color: getRandomPastelColor(),
     };
-    setNotes([...notes, newNote]);
+
+    setNotes((prevNotes) => [...prevNotes, newNote]);
+
+    await sendStickyToServer(newNote);
   };
 
   const updateNote = (id: string, field: 'title' | 'content', value: string | string[]) => {
