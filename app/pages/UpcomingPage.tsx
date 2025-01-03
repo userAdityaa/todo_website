@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
 import axios from 'axios';
+import { DateSelectionModal } from '../components';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
@@ -26,18 +27,86 @@ const UpcomingTask = ({ task }: TaskProps) => {
   const [userTask, setUserTask] = useState("");
   const [list, setList] = useState<Todo[]>([]);
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [newTaskName, setNewTaskName] = useState("");
 
-  const fetchTasks = async () => {
-    // Sort tasks by due date before setting them
-    const sortedTasks = [...task].sort((a, b) => 
+
+  const createTodo = async (todoData: Todo) => {
+    try {
+      const authToken = localStorage.getItem('authToken');
+  
+      if (!authToken) {
+        console.error("Auth token not found in localStorage");
+        return;
+      }
+
+      const formattedTodoData = {
+        ...todoData,
+        due_date: todoData.due_date
+      };
+
+      console.log(formattedTodoData.due_date);
+  
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${authToken}`, 
+          'Content-Type': 'application/json',     
+        },
+      };
+  
+      const response = await axios.post('http://localhost:8000/create-todo', formattedTodoData, config);
+    } catch (error) {
+      console.error("Error creating a new task", error);
+    }
+  };
+
+
+  const handleAddTask = async (category: "today" | "tomorrow" | "thisWeek") => {
+    const now = new Date();
+    let dueDate: Date;
+
+    if (category === "today") {
+      dueDate = new Date(now);
+    } else if (category === "tomorrow") {
+      dueDate = new Date(now);
+      dueDate.setDate(now.getDate() + 1);
+    } else {
+      dueDate = new Date(now);
+      const todayDayIndex = now.getDay(); 
+      const daysUntilSaturday = 6 - todayDayIndex;
+      dueDate.setDate(now.getDate() + daysUntilSaturday); 
+    }
+
+    const formattedDueDate = new Date(dueDate).toISOString().slice(0, 16);
+
+    const newTask = {
+      id: '',
+      name: newTaskName,
+      description: "",
+      list: "",
+      due_date: formattedDueDate,
+      sub_task: [],
+    };
+
+    await createTodo(newTask);
+
+    setUserTask("");
+    setModalOpen(false);
+  };
+
+
+  const fetchTasks = () => {
+    const sortedTasks = [...task].sort((a, b) =>
       new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
     );
-    setList(sortedTasks);
-  };
+    if (JSON.stringify(sortedTasks) !== JSON.stringify(list)) {
+      setList(sortedTasks);
+    }
+  };  
 
   useEffect(() => {
     fetchTasks();
-  }, [task]); // Add task as dependency to update when props change
+  }, [task]);
 
   const filterTasksByDate = (tasks: Todo[]) => {
     const now = new Date();
@@ -68,35 +137,17 @@ const UpcomingTask = ({ task }: TaskProps) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleAddTask = async () => {
-    if (userTask.trim()) {
-      try {
-        const token = localStorage.getItem('authToken');
-        await axios.post('http://localhost:8000/create-todo', {
-          name: userTask.trim()
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        setUserTask("");
-        fetchTasks();
-      } catch (error) {
-        console.error("Error creating task:", error);
-      }
-    }
-  };
-
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && userTask.trim()) {
       e.preventDefault();
-      handleAddTask();
+      setNewTaskName(userTask);
+      setModalOpen(true);
     }
   };
 
-  const handleTaskClick = (task: Todo) => {
-    setSelectedTask(task);
+  const handleTaskClick = (clickedTask: Todo) => {
+    console.log('Task clicked:', clickedTask);  
+    setSelectedTask(clickedTask);
   };
 
   const handleCloseTaskManager = () => {
@@ -113,44 +164,50 @@ const UpcomingTask = ({ task }: TaskProps) => {
     }
   };
 
+  const TaskItem = ({ task }: { task: Todo }) => {
+    return (
+      <li className="flex flex-col border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+        <div className="flex items-start gap-3">
+          <div className="flex-grow min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-lg truncate">{task.name}</span>
+              <span className="text-sm text-gray-500">
+                {formatTime(task.due_date)}
+              </span>
+              {task.list && (
+                <span className={`text-xs px-2 py-1 rounded-md ${getListColor(task.list)}`}>
+                  {task.list}
+                </span>
+              )}
+            </div>
+            {task.description && (
+              <p className="text-sm text-gray-600 mt-1 truncate">{task.description}</p>
+            )}
+            {task.sub_task && task.sub_task.length > 0 && (
+              <div className="flex items-center gap-1 text-sm text-gray-500 mt-2">
+                <img src="/images/todo.svg" alt="Subtasks" className="w-4 h-4" />
+                {task.sub_task.length} subtask{task.sub_task.length > 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <img
+            src="/images/arrow_right.svg"
+            alt="More details"
+            className="w-4 h-4 cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              handleTaskClick(task);
+            }}
+          />
+        </div>
+      </li>
+    );
+  };
+
   const TaskList = ({ tasks }: { tasks: Todo[] }) => (
     <ul className="space-y-4">
       {tasks.map((task) => (
-        <li key={task.id} className="flex flex-col border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-          <div className="flex items-start gap-3">
-            <div className="flex-grow min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-lg truncate">{task.name}</span>
-                <span className="text-sm text-gray-500">
-                  {formatTime(task.due_date)}
-                </span>
-                {task.list && (
-                  <span className={`text-xs px-2 py-1 rounded-md ${getListColor(task.list)}`}>
-                    {task.list}
-                  </span>
-                )}
-              </div>
-              
-              {task.description && (
-                <p className="text-sm text-gray-600 mt-1 truncate">{task.description}</p>
-              )}
-              
-              {task.sub_task && task.sub_task.length > 0 && (
-                <div className="flex items-center gap-1 text-sm text-gray-500 mt-2">
-                  <img src="/images/todo.svg" alt="Subtasks" className="w-4 h-4" />
-                  {task.sub_task.length} subtask{task.sub_task.length > 1 ? 's' : ''}
-                </div>
-              )}
-            </div>
-            
-            <img
-              src="/images/arrow_right.svg"
-              alt="More details"
-              className="w-4 h-4 cursor-pointer"
-              onClick={() => handleTaskClick(task)}
-            />
-          </div>
-        </li>
+        <TaskItem key={task.id} task={task} />
       ))}
     </ul>
   );
@@ -166,7 +223,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
           src="/images/plus_sign.svg"
           alt="Add task"
           className="w-4 h-4 mr-2 cursor-pointer"
-          onClick={handleAddTask}
+          onClick={() => setModalOpen(true)}
         />
         <input
           type="text"
@@ -178,6 +235,12 @@ const UpcomingTask = ({ task }: TaskProps) => {
         />
       </div>
 
+      <DateSelectionModal
+        isOpen={isModalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleAddTask}
+      />
+
       <div className="mt-4 overflow-y-auto flex-1">
         {today.length > 0 && (
           <div className="mb-8">
@@ -185,14 +248,12 @@ const UpcomingTask = ({ task }: TaskProps) => {
             <TaskList tasks={today} />
           </div>
         )}
-
         {tomorrow.length > 0 && (
           <div className="mb-8">
             <h2 className="font-semibold text-xl mb-4">Tomorrow</h2>
             <TaskList tasks={tomorrow} />
           </div>
         )}
-
         {thisWeek.length > 0 && (
           <div className="mb-8">
             <h2 className="font-semibold text-xl mb-4">This Week</h2>
@@ -202,7 +263,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
       </div>
 
       {selectedTask && (
-        <TaskManager 
+        <TaskManager
           todo={selectedTask}
           onClose={handleCloseTaskManager}
         />
