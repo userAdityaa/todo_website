@@ -8,7 +8,7 @@ const public_sans = Public_Sans({
   weight: '400',
 });
 
-interface Task {
+interface Todo {
   id: string;
   name: string;
   description: string;
@@ -18,43 +18,70 @@ interface Task {
   completed?: boolean;
 }
 
-const UpcomingTask = () => {
+interface TaskProps {
+  task: Todo[];
+}
+
+const UpcomingTask = ({ task }: TaskProps) => {
   const [userTask, setUserTask] = useState("");
-  const [list, setList] = useState<Task[]>([]);
-  const [selectedTask, setSelectedTask] = useState<{ id: string; name: string } | null>(null);
+  const [list, setList] = useState<Todo[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
 
   const fetchTasks = async () => {
-    try {
-      const response = await axios.get('http://localhost:8000/all-todo');
-      setList(response.data.map((task: Task) => ({
-        ...task,
-        completed: false
-      })));
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-    }
+    // Sort tasks by due date before setting them
+    const sortedTasks = [...task].sort((a, b) => 
+      new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+    );
+    setList(sortedTasks);
   };
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [task]); // Add task as dependency to update when props change
 
-  const getTasksByDate = (dateType: 'today' | 'tomorrow' | 'this_week') => {
-    return list.filter(task => task.due_date.toLowerCase() === dateType);
+  const filterTasksByDate = (tasks: Todo[]) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    return {
+      today: tasks.filter(task => {
+        const taskDate = new Date(task.due_date);
+        return taskDate >= today && taskDate < tomorrow;
+      }),
+      tomorrow: tasks.filter(task => {
+        const taskDate = new Date(task.due_date);
+        return taskDate >= tomorrow && taskDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+      }),
+      thisWeek: tasks.filter(task => {
+        const taskDate = new Date(task.due_date);
+        return taskDate > tomorrow && taskDate <= weekEnd;
+      })
+    };
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const handleAddTask = async () => {
     if (userTask.trim()) {
       try {
-        const response = await axios.post('http://localhost:8000/create-todo', {
+        const token = localStorage.getItem('authToken');
+        await axios.post('http://localhost:8000/create-todo', {
           name: userTask.trim()
         }, {
           headers: {
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
-        await fetchTasks();
         setUserTask("");
+        fetchTasks();
       } catch (error) {
         console.error("Error creating task:", error);
       }
@@ -68,15 +95,7 @@ const UpcomingTask = () => {
     }
   };
 
-  const toggleTaskCompletion = (taskId: string) => {
-    setList((prevList) =>
-      prevList.map((item) =>
-        item.id === taskId ? { ...item, completed: !item.completed } : item
-      )
-    );
-  };
-
-  const handleTaskClick = (task: { id: string; name: string }) => {
+  const handleTaskClick = (task: Todo) => {
     setSelectedTask(task);
   };
 
@@ -87,19 +106,62 @@ const UpcomingTask = () => {
 
   const getListColor = (listName: string) => {
     switch (listName.toLowerCase()) {
-      case 'personal':
-        return 'bg-red-200';
-      case 'work':
-        return 'bg-blue-200';
-      default:
-        return 'bg-yellow-200';
+      case 'personal': return 'bg-red-200';
+      case 'work': return 'bg-blue-200';
+      case 'shopping': return 'bg-green-200';
+      default: return 'bg-yellow-200';
     }
   };
 
-  const TaskSection = ({ title, tasks }: { title: string; tasks: Task[] }) => (
-    <div className="mb-8">
-      <h2 className="text-2xl font-semibold mb-4">{title}</h2>
-      <div className="flex items-center border border-gray-300 px-2 py-1 mb-4 rounded-lg">
+  const TaskList = ({ tasks }: { tasks: Todo[] }) => (
+    <ul className="space-y-4">
+      {tasks.map((task) => (
+        <li key={task.id} className="flex flex-col border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+          <div className="flex items-start gap-3">
+            <div className="flex-grow min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-lg truncate">{task.name}</span>
+                <span className="text-sm text-gray-500">
+                  {formatTime(task.due_date)}
+                </span>
+                {task.list && (
+                  <span className={`text-xs px-2 py-1 rounded-md ${getListColor(task.list)}`}>
+                    {task.list}
+                  </span>
+                )}
+              </div>
+              
+              {task.description && (
+                <p className="text-sm text-gray-600 mt-1 truncate">{task.description}</p>
+              )}
+              
+              {task.sub_task && task.sub_task.length > 0 && (
+                <div className="flex items-center gap-1 text-sm text-gray-500 mt-2">
+                  <img src="/images/todo.svg" alt="Subtasks" className="w-4 h-4" />
+                  {task.sub_task.length} subtask{task.sub_task.length > 1 ? 's' : ''}
+                </div>
+              )}
+            </div>
+            
+            <img
+              src="/images/arrow_right.svg"
+              alt="More details"
+              className="w-4 h-4 cursor-pointer"
+              onClick={() => handleTaskClick(task)}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const { today, tomorrow, thisWeek } = filterTasksByDate(list);
+
+  return (
+    <div className={`flex flex-col text-black ${public_sans.className} px-2 ${selectedTask ? 'w-2/3' : 'w-full'} h-screen`}>
+      <h1 className="font-bold text-[40px]">Upcoming</h1>
+      
+      <div className="flex items-center border border-gray-300 px-2 py-1 mt-[1.5rem] rounded-lg">
         <img
           src="/images/plus_sign.svg"
           alt="Add task"
@@ -115,76 +177,34 @@ const UpcomingTask = () => {
           onKeyDown={handleKeyPress}
         />
       </div>
-      <ul className="space-y-3">
-        {tasks.map((task) => (
-          <li
-            key={task.id}
-            className="flex items-start gap-3 border border-gray-200 rounded-lg p-3 hover:bg-gray-50"
-          >
-            <div className="pt-1">
-              <input
-                type="checkbox"
-                checked={task.completed}
-                onChange={() => toggleTaskCompletion(task.id)}
-                className="cursor-pointer h-5 w-5"
-              />
-            </div>
-            <div className="flex-grow min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={`text-lg truncate ${task.completed ? "line-through text-gray-500" : ""}`}>
-                  {task.name}
-                </span>
-                {task.list && (
-                  <span className={`text-xs px-2 py-1 rounded-md ${getListColor(task.list)}`}>
-                    {task.list}
-                  </span>
-                )}
-              </div>
-              {task.description && (
-                <p className="text-sm text-gray-600 mt-1 truncate">
-                  {task.description}
-                </p>
-              )}
-              <div className="flex items-center gap-4 mt-2">
-                {task.sub_task && task.sub_task.length > 0 && (
-                  <div className="flex items-center gap-1 text-sm text-gray-500">
-                    <img
-                      src="/images/todo.svg"
-                      alt="Subtasks"
-                      className="w-4 h-4"
-                    />
-                    {task.sub_task.length} subtask{task.sub_task.length > 1 ? 's' : ''}
-                  </div>
-                )}
-              </div>
-            </div>
-            <img
-              src="/images/arrow_right.svg"
-              alt="More details"
-              className="w-4 h-4 cursor-pointer"
-              onClick={() => handleTaskClick({ id: task.id, name: task.name })}
-            />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 
-  return (
-    <div className={`flex flex-col text-black ${public_sans.className} px-2 ${selectedTask ? 'w-2/3' : 'w-full'} h-screen overflow-hidden`}>
-      <h1 className="font-bold text-[40px] mb-6">Upcoming</h1>
-      
-      <div className="overflow-y-auto flex-1">
-        <TaskSection title="Today" tasks={getTasksByDate('today')} />
-        <TaskSection title="Tomorrow" tasks={getTasksByDate('tomorrow')} />
-        <TaskSection title="This Week" tasks={getTasksByDate('this_week')} />
+      <div className="mt-4 overflow-y-auto flex-1">
+        {today.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-semibold text-xl mb-4">Today</h2>
+            <TaskList tasks={today} />
+          </div>
+        )}
+
+        {tomorrow.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-semibold text-xl mb-4">Tomorrow</h2>
+            <TaskList tasks={tomorrow} />
+          </div>
+        )}
+
+        {thisWeek.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-semibold text-xl mb-4">This Week</h2>
+            <TaskList tasks={thisWeek} />
+          </div>
+        )}
       </div>
 
       {selectedTask && (
-        <TaskManager
-          taskName={selectedTask.name}
+        <TaskManager 
+          todo={selectedTask}
           onClose={handleCloseTaskManager}
-          taskId={selectedTask.id}
         />
       )}
     </div>
