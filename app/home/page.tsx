@@ -107,7 +107,7 @@ const Home = () => {
   const renderContent = () => {
     switch (selectedMenuItem) {
       case 'Upcoming':
-        return <UpcomingTask />;
+        return <UpcomingTask task = {list}/>;
       case 'Today':
         return <TodayPage task = {list}/>;
       case 'Calendar':
