@@ -145,7 +145,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
 
           <div className='mt-4'>
             <h2 className='font-bold text-[20px]'>Subtasks:</h2>
-            {subtasks.map((subtask, index) => (
+            {subtasks && subtasks.map((subtask, index) => (
               <input
                 key={index}
                 type="text"
