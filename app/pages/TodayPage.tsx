@@ -27,6 +27,19 @@ const TodayPage = ({task}: TaskProps) => {
   const [list, setList] = useState<Todo[]>([]);
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
 
+  const getEndOfDay = () => {
+    const today = new Date();
+    today.setHours(23, 59, 0, 0);  
+  
+    const hours = today.getHours();
+    const minutes = today.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;  
+    const minuteStr = minutes < 10 ? `0${minutes}` : minutes;
+  
+    const timeString = `${hour12}:${minuteStr} ${ampm}`;
+    return `${today.toISOString().slice(0, 10)} ${timeString}`;
+  };
   const toggleTaskCompletion = async (index: number) => {
     const updatedList = list.map((item, i) =>
       i === index ? { ...item, completed: !item.completed } : item
@@ -60,7 +73,8 @@ const TodayPage = ({task}: TaskProps) => {
       try {
         const token = localStorage.getItem('authToken');
         const response = await axios.post('http://localhost:8000/create-todo', {
-          name: userTask.trim()
+          name: userTask.trim(),
+          due_date: getEndOfDay(),
         }, {
           headers: {
             'Authorization': `Bearer ${token}`,
