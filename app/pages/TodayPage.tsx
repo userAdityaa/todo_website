@@ -62,11 +62,19 @@ const TodayPage = ({task}: TaskProps) => {
     }
   };
 
-  useEffect(() => { 
-    if(task) { 
-      setList(task);
+  useEffect(() => {
+    if (task && Array.isArray(task)) {
+      const today = new Date().toISOString().split("T")[0];
+      
+      const todayTasks = task.filter((item) => {
+        const taskDate = new Date(item.due_date).toISOString().split("T")[0]; 
+        return taskDate === today;
+      });
+  
+      setList(todayTasks); 
     }
   }, [task]);
+  
 
   const handleAddTask = async () => {
     if (userTask.trim()) {
