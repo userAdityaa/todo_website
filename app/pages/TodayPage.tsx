@@ -153,7 +153,7 @@ const TodayPage = ({task}: TaskProps) => {
           type="text"
           placeholder="Add new task"
           className="flex-grow outline-none p-2"
-          value={userTask}
+          value={userTask || ""}
           onChange={(e) => setUserTask(e.target.value)}
           onKeyDown={handleKeyPress}
         />
