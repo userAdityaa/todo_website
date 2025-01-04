@@ -240,20 +240,6 @@ const Home = () => {
             <div className="flex justify-between items-center mb-6">
               <p className="text-zinc-700 text-2xl font-bold">Menu</p>
             </div>
-
-            <div className="relative mb-8">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-full pl-10 p-2 bg-white border border-gray-200 rounded-lg"
-              />
-            </div>
-
             <div className="space-y-6 mb-20">
               <section>
                 <h2 className="text-sm font-semibold text-zinc-500 mb-2">TASKS</h2>
@@ -299,7 +285,7 @@ const Home = () => {
                 </div>
               </section>
 
-              <section>
+              {/* <section>
                 <h2 className="text-sm font-semibold text-zinc-500 mb-2">TAGS</h2>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
@@ -314,14 +300,10 @@ const Home = () => {
                     + Add Tag
                   </button>
                 </div>
-              </section>
+              </section> */}
             </div>
 
             <div className="absolute bottom-8 w-[calc(100%-2rem)] space-y-2">
-              <button className="w-full flex items-center gap-3 p-2">
-                <Image src="/images/settings.svg" alt="Settings icon" height={20} width={20} />
-                <span className="text-zinc-700">Settings</span>
-              </button>
               <button className="w-full flex items-center gap-3 p-2">
                 <Image src="/images/signout.svg" alt="Sign out icon" height={20} width={20} />
                 <span className="text-zinc-700">Sign out</span>
