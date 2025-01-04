@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export interface TodoNote {
   id: string;
@@ -61,6 +62,39 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
       );
     }
   }, [initialNotes]);
+
+  const deleteNote = async (noteId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/delete-sticky`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify({ id: noteId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete sticky: ${response.statusText}`);
+      }
+
+      setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
+      
+      if (updateTimeoutRef.current[noteId]) {
+        clearTimeout(updateTimeoutRef.current[noteId]);
+        delete updateTimeoutRef.current[noteId];
+      }
+      
+      setLocalUpdates(prev => {
+        const newUpdates = { ...prev };
+        delete newUpdates[noteId];
+        return newUpdates;
+      });
+
+    } catch (error) {
+      console.error('Error deleting sticky:', error);
+    }
+  };
 
   const updateNoteOnServer = async (noteId: string, updates: { topic?: string; content?: string }) => {
     try {
@@ -131,8 +165,6 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
         [field]: value
       }
     }));
-
-    // Trigger debounced server update
     debouncedUpdateNote(id, { [field]: value });
   };
 
@@ -187,26 +219,44 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
     <div className="h-screen overflow-y-auto p-6">
       <h1 className="text-4xl font-bold mb-6 sticky top-0 bg-white z-10">Sticky Wall</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-auto">
-        {notes.map((note) => (
-          <Card
-            key={note.id}
-            className="shadow-sm min-h-[100px] border-none"
-            style={{ backgroundColor: note.color }}
-          >
-            <CardContent className="p-4">
-              <AutoResizeTextArea
-                value={getNoteValue(note, 'topic')}
-                onChange={(e) => updateNote(note.id, 'topic', e.target.value)}
-                className="text-xl font-semibold mb-2 min-h-[32px]"
-              />
-              <AutoResizeTextArea
-                value={getNoteValue(note, 'content')}
-                onChange={(e) => updateNote(note.id, 'content', e.target.value)}
-                className="text-gray-700 min-h-[24px]"
-              />
-            </CardContent>
-          </Card>
-        ))}
+      {notes.map((note) => (
+        <Card
+          key={note.id}
+          className="shadow-sm min-h-[100px] border-none relative"
+          style={{ backgroundColor: note.color }}
+        >
+          <div className="absolute top-2 right-2 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-black/10 transition-colors">
+                <MoreVertical className="h-5 w-5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600 cursor-pointer flex items-center gap-2"
+                  onClick={() => deleteNote(note.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Note
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Note Content */}
+          <CardContent className="p-4">
+            <AutoResizeTextArea
+              value={getNoteValue(note, 'topic')}
+              onChange={(e) => updateNote(note.id, 'topic', e.target.value)}
+              className="text-xl font-semibold mb-2 min-h-[32px]"
+            />
+            <AutoResizeTextArea
+              value={getNoteValue(note, 'content')}
+              onChange={(e) => updateNote(note.id, 'content', e.target.value)}
+              className="text-gray-700 min-h-[24px]"
+            />
+          </CardContent>
+        </Card>
+      ))}
         <button
           onClick={addNote}
           className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors min-h-[100px]"
