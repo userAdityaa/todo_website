@@ -17,6 +17,18 @@ export interface Todo {
   completed?: boolean;
 }
 
+interface List {
+  id: string;
+  name: string;
+  color: string;
+  count?: number;
+}
+
+interface ListPayload {
+  name: string;
+  color: string;
+}
+
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const [userName, setUserName] = useState<string>('');
@@ -24,11 +36,7 @@ const Home = () => {
   const [userSticky, setUserSticky] = useState<TodoNote[]>([]);
   const [list, setList] = useState<Todo[]>([]);
   const [selectedMenuItem, setSelectedMenuItem] = useState('Today');
-  const [lists, setLists] = useState([
-    { name: 'Personal', color: 'bg-red-300', count: 3 },
-    { name: 'Work', color: 'bg-cyan-300', count: 3 },
-    { name: 'List 1', color: 'bg-yellow-300', count: 3 }
-  ]);
+  const [lists, setLists] = useState<List[]>([]);
   const [tags, setTags] = useState(['Tag 1', 'Tag 2']);
 
   const [isListDialogOpen, setIsListDialogOpen] = useState(false);
@@ -50,7 +58,43 @@ const Home = () => {
       if (token) {
         localStorage.setItem('authToken', token);
       } 
+      
     };
+
+
+    const fetchLists = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+  
+        const response = await axios.get('http://localhost:8000/all-list', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        // Check if the response contains the "no list found" message
+        if (response.data.message === "No list found for this user") {
+          setLists([]);
+          return;
+        }
+  
+        // Transform the response data to include count if needed
+        const fetchedLists = response.data.map((list: List) => ({
+          ...list,
+          count: list.count || 0, // Default to 0 if count is not provided
+        }));
+  
+        setLists(fetchedLists);
+      } catch (error) {
+        console.error('Error fetching lists:', error);
+        // You might want to show an error message to the user here
+      }
+    };
+  
     
     handleGoogleAuthRedirect();
 
@@ -84,20 +128,86 @@ const Home = () => {
     };
 
     getUserData();
+    fetchLists();
   })
 
-  const handleAddList = () => {
-    if (newListName.trim()) {
-      setLists([...lists, {
-        name: newListName,
-        color: selectedColor,
-        count: 0
-      }]);
-      setNewListName('');
-      setSelectedColor('bg-red-300');
-      setIsListDialogOpen(false);
+  const createList = async (listData: ListPayload) => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    try {
+      const response = await axios.post(
+        'http://localhost:8000/create-list',
+        listData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error creating list:', error);
+      throw error;
     }
   };
+
+
+  const fetchLists = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await axios.get('http://localhost:8000/all-list', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Check if the response contains the "no list found" message
+      if (response.data.message === "No list found for this user") {
+        setLists([]);
+        return;
+      }
+
+      // Transform the response data to include count if needed
+      const fetchedLists = response.data.map((list: List) => ({
+        ...list,
+        count: list.count || 0, // Default to 0 if count is not provided
+      }));
+
+      setLists(fetchedLists);
+    } catch (error) {
+      console.error('Error fetching lists:', error);
+      // You might want to show an error message to the user here
+    }
+  };
+
+  const handleAddList = async () => {
+    if (newListName.trim()) {
+      try {
+        const listData = {
+          name: newListName,
+          color: selectedColor,
+        };
+  
+        await createList(listData);
+        // Fetch the updated list from the server
+        await fetchLists();
+  
+        setNewListName('');
+        setSelectedColor('bg-red-300');
+        setIsListDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to create list:', error);
+      }
+    }
+  }
 
   const handleAddTag = () => {
     if (newTag.trim()) {
@@ -284,23 +394,6 @@ const Home = () => {
                   </button>
                 </div>
               </section>
-
-              {/* <section>
-                <h2 className="text-sm font-semibold text-zinc-500 mb-2">TAGS</h2>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <span key={tag} className="px-3 py-1 bg-gray-200 rounded-full text-sm">
-                      {tag}
-                    </span>
-                  ))}
-                  <button
-                    onClick={() => setIsTagDialogOpen(true)}
-                    className="px-3 py-1 bg-gray-200 rounded-full text-sm"
-                  >
-                    + Add Tag
-                  </button>
-                </div>
-              </section> */}
             </div>
 
             <div className="absolute bottom-8 w-[calc(100%-2rem)] space-y-2">
