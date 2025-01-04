@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { CalendarPage, TodayPage, UpcomingTask } from '../pages';
-import StickyWall from '../pages/StickWall';
+import StickyWall, { TodoNote } from '../pages/StickWall';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Cookie from 'js-cookie'
 import axios from 'axios';
@@ -21,6 +21,7 @@ const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const [userName, setUserName] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
+  const [userSticky, setUserSticky] = useState<TodoNote[]>([]);
   const [list, setList] = useState<Todo[]>([]);
   const [selectedMenuItem, setSelectedMenuItem] = useState('Today');
   const [lists, setLists] = useState([
@@ -63,6 +64,12 @@ const Home = () => {
           },
           withCredentials: true,
         });
+
+        if(response.data.sticky != null) { 
+          setUserSticky(response.data.sticky.map((sticky: TodoNote) => ({
+            ...sticky, 
+          })));
+        }
 
         if(response.data.todos != null){
           setList(response.data.todos.map((todo: Todo) => ({ 
@@ -113,7 +120,7 @@ const Home = () => {
       case 'Calendar':
         return <CalendarPage />;
       case 'Sticky Wall':
-        return <StickyWall />;
+        return <StickyWall initialNotes={userSticky}/>;
       default:
         return null;
     }
