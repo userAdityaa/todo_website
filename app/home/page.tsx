@@ -184,7 +184,6 @@ const Home = () => {
       setLists(fetchedLists);
     } catch (error) {
       console.error('Error fetching lists:', error);
-      // You might want to show an error message to the user here
     }
   };
 
@@ -197,7 +196,6 @@ const Home = () => {
         };
   
         await createList(listData);
-        // Fetch the updated list from the server
         await fetchLists();
   
         setNewListName('');
