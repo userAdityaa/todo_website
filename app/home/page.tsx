@@ -75,23 +75,20 @@ const Home = () => {
             'Content-Type': 'application/json',
           },
         });
-  
-        // Check if the response contains the "no list found" message
+
         if (response.data.message === "No list found for this user") {
           setLists([]);
           return;
         }
-  
-        // Transform the response data to include count if needed
+
         const fetchedLists = response.data.map((list: List) => ({
           ...list,
-          count: list.count || 0, // Default to 0 if count is not provided
+          count: list.count || 0,
         }));
   
         setLists(fetchedLists);
       } catch (error) {
         console.error('Error fetching lists:', error);
-        // You might want to show an error message to the user here
       }
     };
   
