@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Public_Sans } from 'next/font/google';
 import Image from 'next/image';
 import axios from 'axios';
@@ -19,6 +19,12 @@ interface Todo {
   completed?: boolean;
 }
 
+interface List {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface TaskManagerProps {
   todo: Todo;
   onClose: () => void;
@@ -30,13 +36,39 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
   const [dueDate, setDueDate] = useState(todo.due_date.split('T')[0] || '');
   const [dueTime, setDueTime] = useState(todo.due_date.split('T')[1] || '');
   const [subtasks, setSubtasks] = useState<string[]>(todo.sub_task);
+  const [userLists, setUserLists] = useState<List[]>([]);
+  const [error, setError] = useState<string>('');
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchUserLists = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get('http://localhost:8000/all-list', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data.message === "No list found for this user") {
+          setUserLists([]);
+        } else {
+          setUserLists(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching lists:", error);
+        setError('Failed to fetch lists');
+      }
+    };
+
+    fetchUserLists();
+  }, []);
 
   const handleSaveChanges = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const combinedDateTime = dueDate && dueTime 
-        ? `${dueDate}T${dueTime}` 
+      const combinedDateTime = dueDate && dueTime
+        ? `${dueDate}T${dueTime}`
         : '';
 
       await axios.put(`http://localhost:8000/update-todo/${todo.id}`, {
@@ -54,6 +86,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
       onClose();
     } catch (error) {
       console.error("Error updating task:", error);
+      setError('Failed to update task');
     }
   };
 
@@ -68,8 +101,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
   };
 
   const handleDeleteTask = async () => {
-    const token = localStorage.getItem('authToken');
     try {
+      const token = localStorage.getItem('authToken');
       await axios.delete(`http://localhost:8000/delete-todo/${todo.id}`, {
         headers: {
           'Content-Type': 'application/json',
@@ -80,6 +113,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
       router.push("/home");
     } catch (error) {
       console.error("Error deleting task:", error);
+      setError('Failed to delete task');
     }
   };
 
@@ -97,22 +131,20 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
             className='cursor-pointer'
           />
         </div>
-
         <div className='flex-1 overflow-y-auto'>
+          {error && <p className="text-red-500 mb-2">{error}</p>}
           <input
             type="text"
             value={todo.name}
             className="mt-2 p-2 border rounded-lg w-full"
             readOnly
           />
-          
           <textarea
             placeholder="Write description here..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="mt-4 p-2 border rounded-lg h-32 w-full"
           />
-
           <div className='flex items-center mt-4'>
             <label className='mr-2'>List:</label>
             <select
@@ -121,12 +153,17 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
               className="p-2 border rounded-lg"
             >
               <option value="">Select a list</option>
-              <option value="work">Work</option>
-              <option value="personal">Personal</option>
-              <option value="shopping">Shopping</option>
+              {userLists.map((list) => (
+                <option 
+                  key={list.id} 
+                  value={list.id}
+                  style={{ color: list.color }}
+                >
+                  {list.name}
+                </option>
+              ))}
             </select>
           </div>
-
           <div className='flex flex-col gap-2 mt-4'>
             <label>Due Date & Time:</label>
             <input
@@ -142,7 +179,6 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
               className="p-2 border rounded-lg"
             />
           </div>
-
           <div className='mt-4'>
             <h2 className='font-bold text-[20px]'>Subtasks:</h2>
             {subtasks && subtasks.map((subtask, index) => (
@@ -163,7 +199,6 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
             </button>
           </div>
         </div>
-        
         <div className='flex justify-between mt-4 pt-4 border-t border-gray-200'>
           <button
             onClick={handleDeleteTask}
