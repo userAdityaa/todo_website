@@ -11,32 +11,6 @@ interface Event {
   backgroundColor?: string;
 }
 
-
-
-const mockEvents: Event[] = [
-  {
-    id: '1',
-    title: 'Session 1: Marketing Sprint',
-    startTime: '09:00 AM',
-    date: new Date(2024, 11, 30),
-    backgroundColor: 'bg-blue-50'
-  },
-  {
-    id: '2',
-    title: 'Sales Catchup',
-    startTime: '10:00 AM',
-    date: new Date(2024, 11, 30),
-    backgroundColor: 'bg-blue-50'
-  },
-  {
-    id: '3',
-    title: "Coaching session",
-    startTime: '11:00 AM',
-    date: new Date(2024, 11, 30),
-    backgroundColor: 'bg-yellow-50'
-  }
-];
-
 const TimeColumn = () => {
   const timeSlots = Array.from({ length: 24 }, (_, i) => {
     const hour = i;
@@ -56,7 +30,7 @@ const TimeColumn = () => {
   );
 };
 
-const DayView = ({ date, events }: any) => {
+const DayView = ({ date, events }: { date: Date; events: Event[] }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -70,7 +44,7 @@ const DayView = ({ date, events }: any) => {
     const hours = currentTime.getHours();
     const minutes = currentTime.getMinutes();
     const totalMinutes = hours * 60 + minutes;
-    return `${(totalMinutes / (24 * 60)) * 100}%`;
+    return `${totalMinutes * (68.5/60)}px`;
   };
 
   return (
@@ -79,18 +53,18 @@ const DayView = ({ date, events }: any) => {
       <div className="flex-1 relative">
         {isSameDay(date, new Date()) && (
           <div
-            className="absolute left-0 right-0 border-t-[0.5px] border-black z-10"
+            className="absolute left-0 right-0 border-t-2 border-black z-10"
             style={{ top: getCurrentTimePosition() }}
           >
             <div className="absolute -left-2 -top-2 w-4 h-4 rounded-full bg-black" />
           </div>
         )}
-        {events.map((event: any) => (
+        {events.map((event) => (
           <div
             key={event.id}
             className={`absolute left-4 right-4 p-2 rounded-lg ${event.backgroundColor || 'bg-blue-50'}`}
             style={{
-              top: `${(parseInt(event.startTime.split(':')[0]) + (event.startTime.includes('PM') && event.startTime.split(':')[0] !== '12' ? 12 : 0)) * (16 * 4)}px`,
+              top: `${(parseInt(event.startTime.split(':')[0]) + (event.startTime.includes('PM') && event.startTime.split(':')[0] !== '12' ? 12 : 0)) * 64}px`,
               height: '64px'
             }}
           >
@@ -102,63 +76,89 @@ const DayView = ({ date, events }: any) => {
   );
 };
 
-
 const WeekView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDate, events }) => {
-  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
-  
-  const timeSlots = Array.from({ length: 15 }, (_, i) => {
-    const hour = i + 9;
+  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 }); // Start from Monday
+  const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i)); // Monday to Sunday
+  const timeSlots = Array.from({ length: 24 }, (_, i) => {
+    const hour = i;
     const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour === 12 ? 12 : hour % 12;
-    return `${hour12}:00 ${ampm}`;
+    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${hour12.toString().padStart(2, '0')}:00 ${ampm}`;
   });
 
+  // Helper function to calculate event position and height
+  const getEventStyles = (event: Event) => {
+    const hour = parseInt(event.startTime.split(':')[0]);
+    const isPM = event.startTime.includes('PM');
+    const hour24 = isPM && hour !== 12 ? hour + 12 : hour;
+    const topPosition = hour24 * 64; // Each hour slot is 64px
+
+    return {
+      top: `${topPosition}px`,
+      backgroundColor: event.backgroundColor || '#E5F6F6',
+      height: '64px', // Default 1-hour event
+    };
+  };
+
   return (
-    <div className="flex flex-1">
-      <div className="w-20 flex-none">
-        {timeSlots.map((time) => (
-          <div key={time} className="h-20 text-right pr-4 text-sm text-gray-500">
-            {time}
+    <div className="flex flex-col h-full">
+      {/* Header row with days */}
+      <div className="flex border-b sticky top-0 bg-white z-10">
+        <div className="w-20 flex-shrink-0" /> {/* Time column spacer */}
+        {days.map((day) => (
+          <div key={day.toISOString()} className="flex-1 py-4 px-2">
+            <div className="text-sm font-semibold text-gray-500">
+              {format(day, 'EEE').toUpperCase()}
+            </div>
+            <div className="text-2xl font-bold mt-1">
+              {format(day, 'd')}
+            </div>
           </div>
         ))}
       </div>
-      <div className="flex-1 grid grid-cols-7">
-        {days.map((day) => (
-          <div key={format(day, 'yyyy-MM-dd')} className="border-l relative">
-            <div className="sticky top-0 z-10 bg-white text-sm font-medium text-center py-2 border-b">
-              {format(day, 'EEE').toUpperCase()}
-              <div className="text-xs text-gray-500">{format(day, 'd')}</div>
+
+      <div className="flex flex-1 overflow-y-auto">
+        {/* Time labels column */}
+        <div className="w-20 flex-shrink-0 border-r bg-white sticky left-0">
+          {timeSlots.map((time) => (
+            <div key={time} className="h-16 flex items-center justify-end pr-4">
+              <span className="text-sm text-gray-500">{time}</span>
             </div>
+          ))}
+        </div>
+
+        {/* Days columns */}
+        {days.map((day) => (
+          <div key={day.toISOString()} className="flex-1 border-r relative min-w-[120px]">
+            {/* Time grid lines */}
+            {timeSlots.map((_, idx) => (
+              <div 
+                key={idx} 
+                className={`h-16 ${idx === 0 ? '' : 'border-t border-gray-200'}`}
+              />
+            ))}
+
+            {/* Events */}
             {events
               .filter(event => isSameDay(day, event.date))
-              .map(event => {
-                const hour = parseInt(event.startTime.split(':')[0]);
-                const isPM = event.startTime.includes('PM');
-                const hour24 = isPM && hour !== 12 ? hour + 12 : hour;
-                const topPosition = (hour24 - 9) * 80;
-
-                return (
-                  <div
-                    key={event.id}
-                    className={`absolute left-1 right-1 p-2 rounded-lg ${event.backgroundColor || 'bg-blue-50'} overflow-hidden`}
-                    style={{
-                      top: `${topPosition}px`,
-                      height: '64px'
-                    }}
-                  >
-                    <div className="text-sm font-medium text-gray-800 truncate">
-                      {event.title}
-                    </div>
-                  </div>
-                );
-              })}
+              .map(event => (
+                <div
+                  key={event.id}
+                  className="absolute left-1 right-1 p-2 rounded-lg shadow-sm"
+                  style={getEventStyles(event)}
+                >
+                  <div className="text-sm font-medium">{event.title}</div>
+                  <div className="text-xs text-gray-600">{event.startTime}</div>
+                </div>
+              ))}
           </div>
         ))}
       </div>
     </div>
   );
 };
+
+
 
 const MonthView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDate, events }) => {
   const monthStart = startOfMonth(currentDate);
@@ -216,9 +216,9 @@ const MonthView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDa
 
 const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'Day' | 'Week' | 'Month'>('Week');
+  const [view, setView] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [isEventDialogOpen, setIsEventDialogOpen] = useState<boolean>(false);
-  const [events, setEvents] = useState<Event[]>(mockEvents);
+  const [events, setEvents] = useState<Event[]>([]);
 
   const handleSaveEvent = (eventData: Event) => {
     setEvents(prevEvents => [...prevEvents, eventData]);
@@ -252,16 +252,16 @@ const CalendarPage = () => {
             {getHeaderText()}
           </h1>
           <button className="px-4 py-2 bg-white rounded-lg border shadow-sm hover:bg-gray-50 flex items-center gap-2" onClick={() => setIsEventDialogOpen(true)}>
-            <Plus size={20} className='bg-gray-400 rounded-xl'/>
+            <Plus size={20} className='rounded-xl'/>
             <span className="font-medium text-gray-500">Add Event</span>
           </button>
         </div>
 
         <EventDialog 
-        isOpen={isEventDialogOpen}
-        onClose={() => setIsEventDialogOpen(false)}
-        onSave={handleSaveEvent}
-        selectedDate={currentDate}
+          isOpen={isEventDialogOpen}
+          onClose={() => setIsEventDialogOpen(false)}
+          onSave={handleSaveEvent}
+          selectedDate={currentDate}
         />
 
         <div className="flex items-center gap-4 mb-8">
@@ -299,8 +299,8 @@ const CalendarPage = () => {
       <div className="flex-1 bg-white rounded-lg shadow overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-y-auto">
           {view === 'Day' && <DayView date={currentDate} events={events} />}
-          {view === 'Week' && <WeekView currentDate={currentDate} events={mockEvents} />}
-          {view === 'Month' && <MonthView currentDate={currentDate} events={mockEvents} />}
+          {view === 'Week' && <WeekView currentDate={currentDate} events={events} />}
+          {view === 'Month' && <MonthView currentDate={currentDate} events={events} />}
         </div>
       </div>
     </div>
