@@ -1,93 +1,106 @@
-import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, startOfMonth, endOfMonth, isSameMonth, isSameDay, addWeeks, subWeeks, addMonths, subMonths, parseISO } from 'date-fns';
+import React, { useEffect, useState } from 'react';
+import { format, startOfWeek, addDays, startOfMonth, endOfMonth, isSameMonth, isSameDay, addWeeks, subWeeks, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { EventDialog } from '../components/EventDialog';
-import axios from 'axios';
-
-interface Todo {
-  id: string;
-  name: string;
-  description: string;
-  list: string;
-  due_date: string;
-  sub_task: string[];
-  completed?: boolean;
-}
 
 interface Event {
   id: string;
   title: string;
   startTime: string;
+  endTime: string;
   date: Date;
-  backgroundColor?: string;
-  description?: string;
-  isTodo?: boolean;
+  backgroundColor: string;
 }
 
-const getListColor = (list: string): string => {
-  const colorMap: { [key: string]: string } = {
-    'personal': '#FFE0B2',  // Light Orange
-    'work': '#B3E0FF',      // Light Blue
-    'shopping': '#E8F5E9',  // Light Green
-    'study': '#F3E5F5',     // Light Purple
-    'health': '#FFCDD2',    // Light Red
+interface BackendEvent {
+  id: string;
+  title: string;
+  date: string;
+  color: string;
+  start: string;
+  end: string;
+}
+
+interface UseEventsReturn {
+  events: Event[];
+  loading: boolean;
+  error: string | null;
+  refetchEvents: () => Promise<void>;
+}
+
+const useEvents = (): UseEventsReturn => {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchEvents = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:8000/all-event', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+
+      const data = await response.json();
+      
+      if (!data || typeof data === 'string' || 'message' in data) {
+        setEvents([]);
+        return;
+      }
+
+      const eventsArray = Array.isArray(data) ? data : [];
+      
+      const transformedEvents: Event[] = eventsArray.map((event: BackendEvent) => ({
+        id: event.id,
+        title: event.title,
+        date: new Date(event.date),
+        backgroundColor: event.color,
+        startTime: format(new Date(event.start), 'hh:mm a'),
+        endTime: format(new Date(event.end), 'hh:mm a'),
+        description: '',
+      }));
+
+      setEvents(transformedEvents);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setEvents([]); 
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  // Generate a consistent color for unknown lists using string hash
-  if (!list || !colorMap[list]) {
-    let hash = 0;
-    for (let i = 0; i < (list || '').length; i++) {
-      hash = list.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = hash % 360;
-    return `hsl(${hue}, 70%, 90%)`; // Light pastel color
-  }
-  
-  return colorMap[list];
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  return { events, loading, error, refetchEvents: fetchEvents };
 };
 
-const convertTodosToEvents = (todos: Todo[], existingEvents: Event[]): Event[] => {
-  return todos.map(todo => {
-    const date = parseISO(todo.due_date);
-    const startTime = findAvailableTimeSlot(date, existingEvents);
-    
-    return {
-      id: todo.id,
-      title: todo.name,
-      startTime: startTime,
-      date: date,
-      backgroundColor: todo.completed ? '#E5F6E5' : getListColor(todo.list),
-      description: todo.description,
-      isTodo: true, // Add this flag to distinguish todos from regular events
-    };
-  });
-};
+interface TimeColumnProps {}
 
-const findAvailableTimeSlot = (date: Date, events: Event[]): string => {
-  const occupiedSlots = events
-    .filter(event => isSameDay(event.date, date))
-    .map(event => {
-      const hour = parseInt(event.startTime.split(':')[0]);
-      const isPM = event.startTime.includes('PM');
-      return isPM && hour !== 12 ? hour + 12 : hour;
-    });
+interface DayViewProps {
+  date: Date;
+  events: Event[];
+}
 
-  for (let hour = 9; hour <= 17; hour++) {
-    if (!occupiedSlots.includes(hour)) {
-      return `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
-    }
-  }
-  
-  for (let hour = 0; hour < 24; hour++) {
-    if (!occupiedSlots.includes(hour)) {
-      return `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
-    }
-  }
-  
-  return '9:00 AM'; 
-};
+interface WeekViewProps {
+  currentDate: Date;
+  events: Event[];
+}
 
-const TimeColumn = () => {
+interface MonthViewProps {
+  currentDate: Date;
+  events: Event[];
+}
+
+const TimeColumn: React.FC<TimeColumnProps> = () => {
   const timeSlots = Array.from({ length: 24 }, (_, i) => {
     const hour = i;
     const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -106,7 +119,7 @@ const TimeColumn = () => {
   );
 };
 
-const DayView = ({ date, events }: { date: Date; events: Event[] }) => {
+const DayView: React.FC<DayViewProps> = ({ date, events }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -116,14 +129,37 @@ const DayView = ({ date, events }: { date: Date; events: Event[] }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Filter events for the current day only
   const dayEvents = events.filter(event => isSameDay(date, event.date));
 
   const getCurrentTimePosition = () => {
     const hours = currentTime.getHours();
     const minutes = currentTime.getMinutes();
     const totalMinutes = hours * 60 + minutes;
-    return `${totalMinutes * (68.5/60)}px`;
+    return `${totalMinutes * (64/60)}px`;
+  };
+
+  const convertTo24Hour = (timeStr: string): number => {
+    const [rawTime, period] = timeStr.trim().split(' ');
+    let [hours, minutes] = rawTime.split(':').map(Number);
+    
+    if (period === 'PM' && hours !== 12) {
+      hours = hours + 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
+    return hours + (minutes / 60);
+  };
+
+  const getEventPosition = (timeStr: string): number => {
+    const hours24 = convertTo24Hour(timeStr);
+    return hours24 * 64; 
+  };
+
+  const getEventHeight = (startTime: string, endTime: string): number => {
+    const startHours = convertTo24Hour(startTime);
+    const endHours = convertTo24Hour(endTime);
+    return Math.max((endHours - startHours) * 64, 32);
   };
 
   return (
@@ -138,34 +174,50 @@ const DayView = ({ date, events }: { date: Date; events: Event[] }) => {
             <div className="absolute -left-2 -top-2 w-4 h-4 rounded-full bg-black" />
           </div>
         )}
-        {dayEvents.map((event) => (
-          <div
-            key={event.id}
-            className={`absolute left-4 right-4 p-2 rounded-lg ${event.backgroundColor || 'bg-blue-50'}`}
-            style={{
-              top: `${(parseInt(event.startTime.split(':')[0]) + (event.startTime.includes('PM') && event.startTime.split(':')[0] !== '12' ? 12 : 0)) * 64}px`,
-              height: '64px'
-            }}
-          >
-            <div className="flex flex-col">
-              <span className="font-medium text-gray-800">{event.title}</span>
-              {/* {event.isTodo && (
-                <span className="text-xs text-gray-600">
-                  {event.description?.substring(0, 30)}
-                  {event.description!.length > 30 ? '...' : ''}
-                </span>
-              )} */}
+        {dayEvents.map((event) => {
+          const topPosition = getEventPosition(event.startTime);
+          const height = getEventHeight(event.startTime, event.endTime);
+          const isShortEvent = height <= 40; // Check if event is short
+          
+          return (
+            <div
+              key={event.id}
+              className={`absolute left-4 right-4 p-2 rounded-lg ${event.backgroundColor || 'bg-blue-50'}`}
+              style={{
+                top: `${topPosition + 75}px`,
+                height: `${height}px`,
+                minHeight: '32px',
+                overflow: 'hidden'
+              }}
+            >
+              <div className="flex flex-col h-full">
+                
+                {isShortEvent ? (
+                  <div className="text-sm text-gray-800 truncate">
+                    {event.title}
+                  </div>
+                ) : (
+                  <>
+                  <div className="font-medium text-gray-800 truncate">
+                    {event.title}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {event.startTime} - {event.endTime}
+                  </div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 };
 
-const WeekView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDate, events }) => {
-  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 }); // Start from Monday
-  const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i)); // Monday to Sunday
+const WeekView: React.FC<WeekViewProps> = ({ currentDate, events }) => {
+  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   const timeSlots = Array.from({ length: 24 }, (_, i) => {
     const hour = i;
     const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -189,7 +241,7 @@ const WeekView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDat
   return (
     <div className="flex flex-col h-full">
       <div className="flex border-b sticky top-0 bg-white z-10">
-        <div className="w-20 flex-shrink-0" /> {/* Time column spacer */}
+        <div className="w-20 flex-shrink-0" />
         {days.map((day) => (
           <div key={day.toISOString()} className="flex-1 py-4 px-2">
             <div className="text-sm font-semibold text-gray-500">
@@ -229,15 +281,8 @@ const WeekView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDat
                   style={getEventStyles(event)}
                 >
                   <div className="text-sm font-medium">{event.title}</div>
-                  {/* {event.isTodo && (
-                    <div className="text-xs text-gray-600 truncate">
-                      {event.description?.substring(0, 20)}
-                      {event.description?.length > 20 ? '...' : ''}
-                    </div>
-                  )} */}
                 </div>
               ))}
-
           </div>
         ))}
       </div>
@@ -245,9 +290,7 @@ const WeekView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDat
   );
 };
 
-
-
-const MonthView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDate, events }) => {
+const MonthView: React.FC<MonthViewProps> = ({ currentDate, events }) => {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -284,22 +327,16 @@ const MonthView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDa
         >
           <div className="font-medium text-sm">{format(day, 'd')}</div>
           <div className="space-y-1 mt-1">
-          {events
-          .filter(event => isSameDay(day, event.date))
-          .map(event => (
-            <div
-              key={event.id}
-              className={`${event.backgroundColor || 'bg-blue-50'} p-1 rounded text-xs truncate`}
-            >
-              {event.startTime} {event.title}
-              {/* {event.isTodo && (
-                // <div className="text-xs text-gray-600 truncate">
-                //   {event.description?.substring(0, 15)}
-                //   {event.description?.length > 15 ? '...' : ''}
-                // </div>
-              )} */}
-            </div>
-          ))}
+            {events
+              .filter(event => isSameDay(day, event.date))
+              .map(event => (
+                <div
+                  key={event.id}
+                  className={`${event.backgroundColor || 'bg-blue-50'} p-1 rounded text-xs truncate`}
+                >
+                  {event.startTime} {event.title}
+                </div>
+              ))}
           </div>
         </div>
       ))}
@@ -307,46 +344,74 @@ const MonthView: React.FC<{ currentDate: Date; events: Event[] }> = ({ currentDa
   );
 };
 
-const CalendarPage = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+const CalendarPage: React.FC = () => {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [isEventDialogOpen, setIsEventDialogOpen] = useState<boolean>(false);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const { events, loading, error, refetchEvents } = useEvents();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get("http://localhost:8000/auth/user", {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          withCredentials: true,
-        });
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-xl font-medium text-gray-600">Loading events...</div>
+      </div>
+    );
+  }
 
-        if (response.data.todos != null) {
-          const newTodos = response.data.todos.map((todo: Todo) => ({
-            ...todo,
-            completed: false,
-          }));
-          setTodos(newTodos);
-          
-          // Convert todos to events and merge with existing events
-          const todoEvents = convertTodosToEvents(newTodos, events);
-          setEvents(prevEvents => [...prevEvents, ...todoEvents]);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-xl font-medium text-red-600">Error: {error}</div>
+      </div>
+    );
+  }
+
+  const handleSaveEvent = async (eventData: Event) => {
+    const token = localStorage.getItem('authToken');
+    try {
+      const response = await fetch('http://localhost:8000/create-event', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: eventData.title,
+          date: eventData.date.toISOString(),
+          color: eventData.backgroundColor,
+          start: new Date(`${format(eventData.date, 'yyyy-MM-dd')} ${eventData.startTime}`).toISOString(),
+          end: new Date(`${format(eventData.date, 'yyyy-MM-dd')} ${eventData.endTime}`).toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save event');
       }
+
+      await refetchEvents();
+    } catch (err) {
+      console.error('Error saving event:', err);
+    }
+  };
+
+  const getEventStyles = (event: Event) => {
+    const getHoursFromTimeString = (timeStr: string): number => {
+      const [time, period] = timeStr.split(' ');
+      let [hours] = time.split(':').map(Number);
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return hours;
     };
 
-    fetchData();
-  }, []);
-
-  const handleSaveEvent = (eventData: Event) => {
-    setEvents(prevEvents => [...prevEvents, eventData]);
+    const startHour = getHoursFromTimeString(event.startTime);
+    const endHour = getHoursFromTimeString(event.endTime);
+    const duration = endHour - startHour || 1; 
+    
+    return {
+      top: `${startHour * 64}px`,
+      height: `${duration * 64}px`,
+      backgroundColor: event.backgroundColor || '#E5F6F6',
+    };
   };
 
   const navigateDate = (direction: 'prev' | 'next') => {
@@ -369,6 +434,22 @@ const CalendarPage = () => {
     return format(currentDate, 'MMMM yyyy');
   };
 
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-xl font-medium text-gray-600">Loading events...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-xl font-medium text-red-600">Error: {error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col w-full mx-auto p-4">
       <div className="flex-none">
@@ -387,6 +468,7 @@ const CalendarPage = () => {
           onClose={() => setIsEventDialogOpen(false)}
           onSave={handleSaveEvent}
           selectedDate={currentDate}
+          existingEvents={events}
         />
 
         <div className="flex items-center gap-4 mb-8">
