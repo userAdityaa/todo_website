@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { isAfter, startOfDay, isSameDay } from 'date-fns';
+import axios from 'axios';
+import { isAfter, isBefore, isSameDay, parse, parseISO } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const colorOptions = [
   { value: 'bg-blue-50', label: 'Blue' },
@@ -19,20 +20,27 @@ interface EventDialogProps {
   onClose: () => void;
   onSave: (eventData: EventData) => void;
   selectedDate?: Date;
+  existingEvents: EventData[];
 }
 
 export interface EventData {
   id: string;
   title: string;
-  description: string;
   date: Date;
   startTime: string;
   endTime: string;
   backgroundColor: string;
 }
 
-export const EventDialog: React.FC<EventDialogProps> = ({ isOpen, onClose, onSave, selectedDate }) => {
-  const [error, setError] = useState<string>('');
+export const EventDialog: React.FC<EventDialogProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  selectedDate,
+  existingEvents 
+}) => {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [eventData, setEventData] = useState({
     title: '',
     description: '',
@@ -42,33 +50,186 @@ export const EventDialog: React.FC<EventDialogProps> = ({ isOpen, onClose, onSav
     backgroundColor: 'bg-blue-50',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const eventDate = new Date(eventData.date);
-    const today = startOfDay(new Date());
+  const validateDateTime = () => {
+    // Convert event date and times to Date objects
+    const eventDate = parseISO(eventData.date);
+    const now = new Date();
+    
+    const startDateTime = parse(
+      `${eventData.date} ${eventData.startTime}`, 
+      'yyyy-MM-dd HH:mm', 
+      new Date()
+    );
+    
+    const endDateTime = parse(
+      `${eventData.date} ${eventData.endTime}`, 
+      'yyyy-MM-dd HH:mm', 
+      new Date()
+    );
 
-    if (isAfter(today, eventDate) && !isSameDay(today, eventDate)) {
-      setError('Cannot create events in the past');
+    if (isBefore(startDateTime, now)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Date/Time",
+        description: "Cannot create events in the past"
+      });
+      return false;
+    }
+
+    if (isBefore(endDateTime, startDateTime)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Time Range",
+        description: "End time must be after start time"
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const checkTimeSlotConflict = () => {
+    const newEventStart = parse(
+      `${eventData.date} ${eventData.startTime}`, 
+      'yyyy-MM-dd HH:mm', 
+      new Date()
+    );
+    
+    const newEventEnd = parse(
+      `${eventData.date} ${eventData.endTime}`, 
+      'yyyy-MM-dd HH:mm', 
+      new Date()
+    );
+
+    const hasConflict = existingEvents.some(event => {
+      if (!isSameDay(new Date(event.date), parseISO(eventData.date))) {
+        return false;
+      }
+
+      const existingStart = parse(
+        `${eventData.date} ${event.startTime}`, 
+        'yyyy-MM-dd HH:mm', 
+        new Date()
+      );
+      
+      const existingEnd = parse(
+        `${eventData.date} ${event.endTime}`, 
+        'yyyy-MM-dd HH:mm', 
+        new Date()
+      );
+
+      // Check for any overlap
+      const hasOverlap = (
+        (isBefore(newEventStart, existingEnd) && isAfter(newEventEnd, existingStart)) ||
+        (isBefore(existingStart, newEventEnd) && isAfter(existingEnd, newEventStart))
+      );
+
+      if (hasOverlap) {
+        toast({
+          variant: "destructive",
+          title: "Time Slot Conflict",
+          description: `This time slot conflicts with "${event.title}"`
+        });
+        return true;
+      }
+
+      return false;
+    });
+
+    return hasConflict;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (!validateDateTime() || checkTimeSlotConflict()) {
+      setIsLoading(false);
       return;
     }
 
-    const newEvent: EventData = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...eventData,
-      date: eventDate
-    };
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "Please log in again to continue"
+        });
+        setIsLoading(false);
+        return;
+      }
 
-    onSave(newEvent);
-    onClose();
-    setEventData({
-      title: '',
-      description: '',
-      date: new Date().toISOString().split('T')[0],
-      startTime: '09:00',
-      endTime: '10:00',
-      backgroundColor: 'bg-blue-50',
-    });
-    setError('');
+      const eventDate = parseISO(eventData.date);
+      const startDateTime = parse(
+        `${eventData.date} ${eventData.startTime}`, 
+        'yyyy-MM-dd HH:mm', 
+        new Date()
+      );
+      const endDateTime = parse(
+        `${eventData.date} ${eventData.endTime}`, 
+        'yyyy-MM-dd HH:mm', 
+        new Date()
+      );
+
+      const response = await axios.post(
+        'http://localhost:8000/create-event',
+        {
+          title: eventData.title,
+          description: eventData.description,
+          date: eventDate,
+          start: startDateTime,
+          end: endDateTime,
+          color: eventData.backgroundColor
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (response.status === 201) {
+        const newEvent: EventData = {
+          id: response.data.id,
+          ...eventData,
+          date: eventDate
+        };
+
+        toast({
+          title: "Success",
+          description: "Event created successfully"
+        });
+
+        onSave(newEvent);
+        onClose();
+        setEventData({
+          title: '',
+          description: '',
+          date: new Date().toISOString().split('T')[0],
+          startTime: '09:00',
+          endTime: '10:00',
+          backgroundColor: 'bg-blue-50',
+        });
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.response?.data?.message || 'Failed to create event'
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "An unexpected error occurred"
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -78,7 +239,6 @@ export const EventDialog: React.FC<EventDialogProps> = ({ isOpen, onClose, onSav
           <DialogTitle>Create New Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="text-red-500 text-sm">{error}</div>}
           <div>
             <Label>Event Name</Label>
             <Input
@@ -93,10 +253,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ isOpen, onClose, onSav
             <Input
               type="date"
               value={eventData.date}
-              onChange={e => {
-                setEventData({...eventData, date: e.target.value});
-                setError('');
-              }}
+              onChange={e => setEventData({...eventData, date: e.target.value})}
               required
             />
           </div>
@@ -136,11 +293,11 @@ export const EventDialog: React.FC<EventDialogProps> = ({ isOpen, onClose, onSav
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" type="button" onClick={onClose}>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit">
-              Create Event
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Event'}
             </Button>
           </div>
         </form>
@@ -148,3 +305,5 @@ export const EventDialog: React.FC<EventDialogProps> = ({ isOpen, onClose, onSav
     </Dialog>
   );
 };
+
+export default EventDialog;

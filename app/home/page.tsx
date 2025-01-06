@@ -61,7 +61,6 @@ const Home = () => {
       
     };
 
-
     const fetchLists = async () => {
       try {
         const token = localStorage.getItem('authToken');
