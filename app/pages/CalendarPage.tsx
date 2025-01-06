@@ -135,7 +135,7 @@ const DayView: React.FC<DayViewProps> = ({ date, events }) => {
     const hours = currentTime.getHours();
     const minutes = currentTime.getMinutes();
     const totalMinutes = hours * 60 + minutes;
-    return `${totalMinutes * (64/60)}px`;
+    return `${totalMinutes * (68.5/60)}px`;
   };
 
   const convertTo24Hour = (timeStr: string): number => {
@@ -295,10 +295,13 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, events }) => {
   const monthEnd = endOfMonth(currentDate);
   const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
   
+  // Debug log to check incoming events
+  console.log('Incoming events:', events);
+  
   const weeks = [];
   let week = [];
   let day = startDate;
-
+  
   while (week.length < 7 || day <= monthEnd) {
     if (week.length === 7) {
       weeks.push(week);
@@ -311,6 +314,8 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, events }) => {
     weeks.push(week);
   }
 
+  const processedEventIds = new Set<string>();
+
   return (
     <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200">
       {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(day => (
@@ -318,28 +323,52 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, events }) => {
           {day}
         </div>
       ))}
-      {weeks.flat().map((day, idx) => (
-        <div
-          key={idx}
-          className={`bg-white min-h-[100px] p-2 ${
-            !isSameMonth(day, currentDate) ? 'text-gray-400' : ''
-          }`}
-        >
-          <div className="font-medium text-sm">{format(day, 'd')}</div>
-          <div className="space-y-1 mt-1">
-            {events
-              .filter(event => isSameDay(day, event.date))
-              .map(event => (
-                <div
-                  key={event.id}
-                  className={`${event.backgroundColor || 'bg-blue-50'} p-1 rounded text-xs truncate`}
-                >
-                  {event.startTime} {event.title}
-                </div>
-              ))}
+      {weeks.flat().map((day, idx) => {
+        processedEventIds.clear();
+        
+        const dayEvents = events.filter(event => {
+          if (isSameDay(day, event.date) && !processedEventIds.has(event.id)) {
+            processedEventIds.add(event.id);
+            return true;
+          }
+          return false;
+        });
+
+        return (
+          <div
+            key={idx}
+            className={`bg-white min-h-[100px] p-2 ${
+              !isSameMonth(day, currentDate) ? 'text-gray-400' : ''
+            }`}
+          >
+            <div className="font-medium text-sm">{format(day, 'd')}</div>
+            <div className="space-y-1 mt-1">
+              {dayEvents
+                .reduce((unique: Event[], event) => {
+                  const hasTimeSlot = unique.some(
+                    existingEvent => 
+                      existingEvent.startTime === event.startTime &&
+                      existingEvent.endTime === event.endTime
+                  );
+                  
+                  if (!hasTimeSlot) {
+                    unique.push(event);
+                  }
+                  
+                  return unique;
+                }, [])
+                .map(event => (
+                  <div
+                    key={event.id}
+                    className={`${event.backgroundColor || 'bg-blue-50'} p-1 rounded text-xs truncate`}
+                  >
+                    {event.startTime} {event.title}
+                  </div>
+                ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
