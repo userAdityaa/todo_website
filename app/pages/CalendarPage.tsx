@@ -225,16 +225,29 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, events }) => {
     return `${hour12.toString().padStart(2, '0')}:00 ${ampm}`;
   });
 
-  const getEventStyles = (event: Event) => {
-    const hour = parseInt(event.startTime.split(':')[0]);
-    const isPM = event.startTime.includes('PM');
-    const hour24 = isPM && hour !== 12 ? hour + 12 : hour;
-    const topPosition = hour24 * 64; 
+  const convertTo24Hour = (timeStr: string): number => {
+    const [rawTime, period] = timeStr.trim().split(' ');
+    let [hours, minutes] = rawTime.split(':').map(Number);
+    
+    if (period === 'PM' && hours !== 12) {
+      hours = hours + 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
+    return hours + (minutes / 60);
+  };
 
+  const getEventStyles = (event: Event) => {
+    const startHour = convertTo24Hour(event.startTime);
+    const endHour = convertTo24Hour(event.endTime);
+    const duration = endHour - startHour;
+    const height = Math.max(duration * 64, 32); // Minimum height of 32px
+    
     return {
-      top: `${topPosition}px`,
-      backgroundColor: event.backgroundColor || '#E5F6F6',
-      height: '64px', 
+      top: `${startHour * 64}px`,
+      height: `${height}px`,
+      backgroundColor: event.backgroundColor,
     };
   };
 
@@ -266,23 +279,37 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, events }) => {
         {days.map((day) => (
           <div key={day.toISOString()} className="flex-1 border-r relative min-w-[120px]">
             {timeSlots.map((_, idx) => (
-              <div 
-                key={idx} 
-                className={`h-16 ${idx === 0 ? '' : 'border-t border-gray-200'}`}
+              <div
+                key={idx}
+                className={`h-16 border-t border-gray-200 ${
+                  idx === timeSlots.length - 1 ? 'border-b' : ''
+                }`}
               />
             ))}
 
             {events
               .filter(event => isSameDay(day, event.date))
-              .map(event => (
-                <div
-                  key={event.id}
-                  className="absolute left-1 right-1 p-2 rounded-lg shadow-sm"
-                  style={getEventStyles(event)}
-                >
-                  <div className="text-sm font-medium">{event.title}</div>
-                </div>
-              ))}
+              .map(event => {
+                const startHour = convertTo24Hour(event.startTime);
+                const endHour = convertTo24Hour(event.endTime);
+                const duration = endHour - startHour;
+                const isShortEvent = duration < 1;
+
+                return (
+                  <div
+                    key={event.id}
+                    className={`absolute left-1 right-1 p-2 rounded-lg shadow-sm overflow-hidden ${event.backgroundColor}`}
+                    style={getEventStyles(event)}
+                  >
+                    <div className="text-sm font-medium truncate">{event.title}</div>
+                    {!isShortEvent && (
+                      <div className="text-xs truncate">
+                        {event.startTime} - {event.endTime}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         ))}
       </div>
