@@ -242,7 +242,6 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
             </DropdownMenu>
           </div>
 
-          {/* Note Content */}
           <CardContent className="p-4">
             <AutoResizeTextArea
               value={getNoteValue(note, 'topic')}
