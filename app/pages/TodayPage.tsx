@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
@@ -18,14 +19,83 @@ interface Todo {
   completed?: boolean;
 }
 
+interface List {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface TaskProps { 
   task: Todo[];
 }
 
 const TodayPage = ({task}: TaskProps) => {
-  const [userTask, setUserTask] = useState("");
+  const router = useRouter();
+  const [userTask, setUserTask] = useState<string>("");
   const [list, setList] = useState<Todo[]>([]);
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
+  const [listDetails, setListDetails] = useState<Map<string, List>>(new Map());
+
+  useEffect(() => {
+    const fetchListDetails = async () => {
+      const token = localStorage.getItem('authToken');
+      try {
+        const uniqueListIds = Array.from(new Set(list.map(item => item.list).filter(Boolean)));
+        
+        const listDetailsPromises = uniqueListIds.map(listId =>
+          axios.get(`http://localhost:8000/lists/${listId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        );
+
+        const responses = await Promise.all(listDetailsPromises);
+        const newListDetails = new Map();
+        
+        responses.forEach((response, index) => {
+          const listData = response.data;
+          newListDetails.set(uniqueListIds[index], {
+            id: listData.id,
+            name: listData.name,
+            color: listData.color
+          });
+        });
+
+        setListDetails(newListDetails);
+      } catch (error) {
+        console.error("Error fetching list details:", error);
+      }
+    };
+
+    if (list.length > 0) {
+      fetchListDetails();
+    }
+  }, [list]);
+
+  useEffect(() => {
+    if (Array.isArray(task)) {
+      const today = new Date().toISOString().split("T")[0];
+      const todayTasks = task.filter((item) => {
+        const taskDate = new Date(item.due_date).toISOString().split("T")[0];
+        return taskDate === today;
+      });
+      setList(todayTasks);
+    }
+  }, [task]);
+
+  const getListName = (listId: string) => {
+    return listDetails.get(listId)?.name || 'Unknown List';
+  };
+
+  const getListColor = (listId: string) => {
+    const listColor = listDetails.get(listId)?.color;
+    if (listColor) {
+      return listColor; 
+    }
+    return 'bg-gray-200'; 
+  };
 
   const getEndOfDay = () => {
     const today = new Date();
@@ -40,6 +110,7 @@ const TodayPage = ({task}: TaskProps) => {
     const timeString = `${hour12}:${minuteStr} ${ampm}`;
     return `${today.toISOString().slice(0, 10)} ${timeString}`;
   };
+
   const toggleTaskCompletion = async (index: number) => {
     const updatedList = list.map((item, i) =>
       i === index ? { ...item, completed: !item.completed } : item
@@ -62,20 +133,6 @@ const TodayPage = ({task}: TaskProps) => {
     }
   };
 
-  useEffect(() => {
-    if (task && Array.isArray(task)) {
-      const today = new Date().toISOString().split("T")[0];
-      
-      const todayTasks = task.filter((item) => {
-        const taskDate = new Date(item.due_date).toISOString().split("T")[0]; 
-        return taskDate === today;
-      });
-  
-      setList(todayTasks); 
-    }
-  }, [task]);
-  
-
   const handleAddTask = async () => {
     if (userTask.trim()) {
       try {
@@ -93,6 +150,7 @@ const TodayPage = ({task}: TaskProps) => {
         const newTask: Todo = response.data;
         setList([...list, newTask]);
         setUserTask("");
+        window.location.reload();
       } catch (error) {
         console.error("Error creating task:", error);
       }
@@ -112,17 +170,7 @@ const TodayPage = ({task}: TaskProps) => {
 
   const handleCloseTaskManager = () => {
     setSelectedTask(null);
-  };
-
-  const getListColor = (listName: string) => {
-    switch (listName.toLowerCase()) {
-      case 'personal':
-        return 'bg-red-200';
-      case 'work':
-        return 'bg-blue-200';
-      default:
-        return 'bg-yellow-200';
-    }
+    window.location.reload();
   };
 
   const formatDate = (dateString: string) => {
@@ -153,7 +201,7 @@ const TodayPage = ({task}: TaskProps) => {
           type="text"
           placeholder="Add new task"
           className="flex-grow outline-none p-2"
-          value={userTask || ""}
+          value={userTask} 
           onChange={(e) => setUserTask(e.target.value)}
           onKeyDown={handleKeyPress}
         />
@@ -183,7 +231,7 @@ const TodayPage = ({task}: TaskProps) => {
                     </span>
                     {item.list && (
                       <span className={`text-xs px-2 py-1 rounded-md ${getListColor(item.list)}`}>
-                        {item.list}
+                        {getListName(item.list)}
                       </span>
                     )}
                   </div>
