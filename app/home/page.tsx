@@ -4,12 +4,12 @@ import Image from 'next/image';
 import { CalendarPage, TodayPage, UpcomingTask } from '../pages';
 import StickyWall, { TodoNote } from '../pages/StickWall';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import Cookie from 'js-cookie'
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
-export interface Todo { 
-  id: string; 
-  name: string; 
+export interface Todo {
+  id: string;
+  name: string;
   description: string;
   list: string;
   due_date: string;
@@ -30,15 +30,15 @@ interface ListPayload {
 }
 
 const Home = () => {
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(true);
-  const [userName, setUserName] = useState<string>('');
-  const [userEmail, setUserEmail] = useState<string>('');
   const [userSticky, setUserSticky] = useState<TodoNote[]>([]);
   const [list, setList] = useState<Todo[]>([]);
-  const [selectedMenuItem, setSelectedMenuItem] = useState('Today');
+  const [selectedMenuItem, setSelectedMenuItem] = useState(() => {
+    return localStorage.getItem('selectedMenuItem') || 'Today';
+  });
   const [lists, setLists] = useState<List[]>([]);
   const [tags, setTags] = useState(['Tag 1', 'Tag 2']);
-
   const [isListDialogOpen, setIsListDialogOpen] = useState(false);
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [newListName, setNewListName] = useState('');
@@ -46,19 +46,58 @@ const Home = () => {
   const [newTag, setNewTag] = useState('');
 
   const colors = [
-    'bg-red-300', 'bg-blue-300', 'bg-green-300', 'bg-yellow-300', 
+    'bg-red-300', 'bg-blue-300', 'bg-green-300', 'bg-yellow-300',
     'bg-purple-300', 'bg-pink-300', 'bg-indigo-300', 'bg-cyan-300'
   ];
 
-  useEffect(() => { 
+  const calculateCounts = (todos: Todo[]) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    // Initialize list counts map
+    const listCounts = new Map<string, number>();
+
+    // Count for today's tasks
+    const todayCount = todos.filter(todo => {
+      const taskDate = new Date(todo.due_date);
+      return taskDate >= today && taskDate < tomorrow && !todo.completed;
+    }).length;
+
+    // Count for tomorrow's tasks
+    const tomorrowCount = todos.filter(todo => {
+      const taskDate = new Date(todo.due_date);
+      return taskDate >= tomorrow && 
+             taskDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000) &&
+             !todo.completed;
+    }).length;
+
+    // Count for this week's tasks (including today and tomorrow)
+    const upcomingCount = todos.filter(todo => {
+      const taskDate = new Date(todo.due_date);
+      return taskDate >= today && taskDate <= weekEnd && !todo.completed;
+    }).length;
+
+    // Calculate counts for each list
+    todos.forEach(todo => {
+      if (todo.list && !todo.completed) {
+        listCounts.set(todo.list, (listCounts.get(todo.list) || 0) + 1);
+      }
+    });
+
+    return { todayCount, tomorrowCount, upcomingCount, listCounts };
+  };
+
+  useEffect(() => {
     const handleGoogleAuthRedirect = () => {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
-    
       if (token) {
         localStorage.setItem('authToken', token);
-      } 
-      
+      }
     };
 
     const fetchLists = async () => {
@@ -67,32 +106,26 @@ const Home = () => {
         if (!token) {
           throw new Error('No authentication token found');
         }
-  
         const response = await axios.get('http://localhost:8000/all-list', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
-
         if (response.data.message === "No list found for this user") {
           setLists([]);
           return;
         }
-
+        const { listCounts } = calculateCounts(list);
         const fetchedLists = response.data.map((list: List) => ({
           ...list,
-          count: list.count || 0,
+          count: listCounts.get(list.id) || 0,
         }));
-  
         setLists(fetchedLists);
       } catch (error) {
         console.error('Error fetching lists:', error);
       }
     };
-  
-    
-    handleGoogleAuthRedirect();
 
     const getUserData = async () => {
       try {
@@ -104,28 +137,49 @@ const Home = () => {
           },
           withCredentials: true,
         });
-
-        if(response.data.sticky != null) { 
+        let todos: Todo[] = [];
+        if(response.data.todos != null) {
+          todos = response.data.todos.map((todo: Todo) => ({
+            ...todo,
+            completed: false,
+          }));
+          setList(todos);
+        }
+        if(response.data.sticky != null) {
           setUserSticky(response.data.sticky.map((sticky: TodoNote) => ({
-            ...sticky, 
+            ...sticky,
+          })));
+        }
+        if(response.data.todos != null){
+          setList(response.data.todos.map((todo: Todo) => ({
+            ...todo,
+            completed: false,
           })));
         }
 
-        if(response.data.todos != null){
-          setList(response.data.todos.map((todo: Todo) => ({ 
-            ...todo, 
-            completed: false,
-          })));
-        } 
+        const { todayCount, upcomingCount } = calculateCounts(todos);
+
+        setMenuItems(prevItems => 
+          prevItems.map(item => ({
+            ...item,
+            count: item.label === 'Today' ? todayCount :
+                   item.label === 'Upcoming' ? upcomingCount :
+                   item.count
+          }))
+        );
       } catch (error) {
         console.error("Error fetching user data:", error);
-        throw error;
       }
     };
 
+    handleGoogleAuthRedirect();
     getUserData();
     fetchLists();
-  })
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('selectedMenuItem', selectedMenuItem);
+  }, [selectedMenuItem]);
 
   const createList = async (listData: ListPayload) => {
     const token = localStorage.getItem('authToken');
@@ -150,6 +204,25 @@ const Home = () => {
     }
   };
 
+  useEffect(() => {
+    const { todayCount, upcomingCount, listCounts } = calculateCounts(list);
+
+    setMenuItems(prevItems => 
+      prevItems.map(item => ({
+        ...item,
+        count: item.label === 'Today' ? todayCount :
+               item.label === 'Upcoming' ? upcomingCount :
+               item.count
+      }))
+    );
+
+    setLists(prevLists => 
+      prevLists.map(list => ({
+        ...list,
+        count: listCounts.get(list.id) || 0,
+      }))
+    );
+  }, [list]);
 
   const fetchLists = async () => {
     try {
@@ -157,26 +230,20 @@ const Home = () => {
       if (!token) {
         throw new Error('No authentication token found');
       }
-
       const response = await axios.get('http://localhost:8000/all-list', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
-      // Check if the response contains the "no list found" message
       if (response.data.message === "No list found for this user") {
         setLists([]);
         return;
       }
-
-      // Transform the response data to include count if needed
       const fetchedLists = response.data.map((list: List) => ({
         ...list,
-        count: list.count || 0, // Default to 0 if count is not provided
+        count: list.count || 0,
       }));
-
       setLists(fetchedLists);
     } catch (error) {
       console.error('Error fetching lists:', error);
@@ -190,10 +257,8 @@ const Home = () => {
           name: newListName,
           color: selectedColor,
         };
-  
         await createList(listData);
         await fetchLists();
-  
         setNewListName('');
         setSelectedColor('bg-red-300');
         setIsListDialogOpen(false);
@@ -201,7 +266,7 @@ const Home = () => {
         console.error('Failed to create list:', error);
       }
     }
-  }
+  };
 
   const handleAddTag = () => {
     if (newTag.trim()) {
@@ -215,12 +280,17 @@ const Home = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const handleMenuItemClick = (menuItem: string) => {
+    setSelectedMenuItem(menuItem);
+    localStorage.setItem('selectedMenuItem', menuItem);
+  };
+
   const renderContent = () => {
     switch (selectedMenuItem) {
       case 'Upcoming':
-        return <UpcomingTask task = {list}/>;
+        return <UpcomingTask task={list}/>;
       case 'Today':
-        return <TodayPage task = {list}/>;
+        return <TodayPage task={list}/>;
       case 'Calendar':
         return <CalendarPage />;
       case 'Sticky Wall':
@@ -230,12 +300,17 @@ const Home = () => {
     }
   };
 
-  const menuItems = [
-    { label: 'Upcoming', icon: '/images/upcoming.svg', count: 12 },
-    { label: 'Today', icon: '/images/todo.svg', count: 5 },
+  const handleSignOut = () => {
+    localStorage.removeItem('authToken');
+    router.push('/auth');
+  };
+
+  const [menuItems, setMenuItems] = useState([
+    { label: 'Upcoming', icon: '/images/upcoming.svg', count: 0 },
+    { label: 'Today', icon: '/images/todo.svg', count: 0 },
     { label: 'Calendar', icon: '/images/calendar.svg' },
     { label: 'Sticky Wall', icon: '/images/notes.svg' },
-  ];
+  ]);
 
   return (
     <div className="bg-white h-screen w-screen flex overflow-hidden">
@@ -321,17 +396,17 @@ const Home = () => {
         </DialogContent>
       </Dialog>
 
-      <button 
+      <button
         className={`absolute z-50 transition-all duration-300 ${
           isMenuOpen ? 'top-9 left-[20vw]' : 'top-5 left-5'
         }`}
         onClick={handleMenuToggle}
       >
-        <Image 
-          src="/images/ham_menu.svg" 
-          alt="Menu" 
-          height={30} 
-          width={24} 
+        <Image
+          src="/images/ham_menu.svg"
+          alt="Menu"
+          height={30}
+          width={24}
         />
       </button>
 
@@ -353,7 +428,7 @@ const Home = () => {
                       key={item.label}
                       className={`w-full flex items-center justify-between p-2 rounded-lg
                         ${selectedMenuItem === item.label ? 'bg-gray-200' : ''}`}
-                      onClick={() => setSelectedMenuItem(item.label)}
+                      onClick={() => handleMenuItemClick(item.label)}
                     >
                       <div className="flex items-center gap-3">
                         <Image src={item.icon} alt={`${item.label} icon`} height={20} width={20} />
@@ -366,7 +441,6 @@ const Home = () => {
                   ))}
                 </div>
               </section>
-
               <section>
                 <h2 className="text-sm font-semibold text-zinc-500 mb-2">LISTS</h2>
                 <div className="space-y-1">
@@ -389,8 +463,7 @@ const Home = () => {
                 </div>
               </section>
             </div>
-
-            <div className="absolute bottom-8 w-[calc(100%-2rem)] space-y-2">
+            <div className="absolute bottom-8 w-[calc(100%-2rem)] space-y-2" onClick={handleSignOut}>
               <button className="w-full flex items-center gap-3 p-2">
                 <Image src="/images/signout.svg" alt="Sign out icon" height={20} width={20} />
                 <span className="text-zinc-700">Sign out</span>
@@ -408,6 +481,5 @@ const Home = () => {
     </div>
   );
 };
-
 
 export default Home;
