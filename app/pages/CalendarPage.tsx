@@ -43,9 +43,7 @@ const useEvents = (): UseEventsReturn => {
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch events');
-      }
+      if(!response.ok) return;
 
       const data = await response.json();
       
@@ -109,7 +107,7 @@ const TimeColumn: React.FC<TimeColumnProps> = () => {
   });
 
   return (
-    <div className="w-20 flex-none mt-[4.5rem]">
+    <div className="w-20 flex-none mt-[1rem]">
       {timeSlots.map((time) => (
         <div key={time} className="h-16 text-right pr-4">
           <span className="text-sm font-medium text-gray-700">{time}</span>
@@ -135,7 +133,7 @@ const DayView: React.FC<DayViewProps> = ({ date, events }) => {
     const hours = currentTime.getHours();
     const minutes = currentTime.getMinutes();
     const totalMinutes = hours * 60 + minutes;
-    return `${totalMinutes * (68.5/60)}px`;
+    return `${totalMinutes * (65/60)}px`;
   };
 
   const convertTo24Hour = (timeStr: string): number => {
@@ -177,14 +175,14 @@ const DayView: React.FC<DayViewProps> = ({ date, events }) => {
         {dayEvents.map((event) => {
           const topPosition = getEventPosition(event.startTime);
           const height = getEventHeight(event.startTime, event.endTime);
-          const isShortEvent = height <= 40; // Check if event is short
+          const isShortEvent = height <= 40; 
           
           return (
             <div
               key={event.id}
               className={`absolute left-4 right-4 p-2 rounded-lg ${event.backgroundColor || 'bg-blue-50'}`}
               style={{
-                top: `${topPosition + 75}px`,
+                top: `${topPosition + 25}px`,
                 height: `${height}px`,
                 minHeight: '32px',
                 overflow: 'hidden'
@@ -242,7 +240,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, events }) => {
     const startHour = convertTo24Hour(event.startTime);
     const endHour = convertTo24Hour(event.endTime);
     const duration = endHour - startHour;
-    const height = Math.max(duration * 64, 32); // Minimum height of 32px
+    const height = Math.max(duration * 64, 32); 
     
     return {
       top: `${startHour * 64}px`,
