@@ -19,6 +19,12 @@ interface Todo {
   completed?: boolean;
 }
 
+interface List {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface TaskProps {
   task: Todo[];
 }
@@ -29,7 +35,45 @@ const UpcomingTask = ({ task }: TaskProps) => {
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [newTaskName, setNewTaskName] = useState("");
+  const [listDetails, setListDetails] = useState<Map<string, List>>(new Map());
 
+  useEffect(() => {
+    const fetchListDetails = async () => {
+      const token = localStorage.getItem('authToken');
+      try {
+        const uniqueListIds = Array.from(new Set(list.map(item => item.list).filter(Boolean)));
+        
+        const listDetailsPromises = uniqueListIds.map(listId =>
+          axios.get(`http://localhost:8000/lists/${listId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        );
+
+        const responses = await Promise.all(listDetailsPromises);
+        const newListDetails = new Map();
+        
+        responses.forEach((response, index) => {
+          const listData = response.data;
+          newListDetails.set(uniqueListIds[index], {
+            id: listData.id,
+            name: listData.name,
+            color: listData.color
+          });
+        });
+
+        setListDetails(newListDetails);
+      } catch (error) {
+        console.error("Error fetching list details:", error);
+      }
+    };
+
+    if (list.length > 0) {
+      fetchListDetails();
+    }
+  }, [list]);
 
   const createTodo = async (todoData: Todo) => {
     try {
@@ -37,15 +81,13 @@ const UpcomingTask = ({ task }: TaskProps) => {
   
       if (!authToken) {
         console.error("Auth token not found in localStorage");
-        return;
+        return null;
       }
 
       const formattedTodoData = {
         ...todoData,
         due_date: todoData.due_date
       };
-
-      console.log(formattedTodoData.due_date);
   
       const config = {
         headers: {
@@ -55,11 +97,24 @@ const UpcomingTask = ({ task }: TaskProps) => {
       };
   
       const response = await axios.post('http://localhost:8000/create-todo', formattedTodoData, config);
+      return response.data;
     } catch (error) {
       console.error("Error creating a new task", error);
+      return null;
     }
   };
 
+  const getListName = (listId: string) => {
+    return listDetails.get(listId)?.name || 'Unknown List';
+  };
+
+  const getListColor = (listId: string) => {
+    const listColor = listDetails.get(listId)?.color;
+    if (listColor) {
+      return listColor;
+    }
+    return 'bg-gray-200';
+  };
 
   const handleAddTask = async (category: "today" | "tomorrow" | "thisWeek") => {
     const now = new Date();
@@ -88,25 +143,47 @@ const UpcomingTask = ({ task }: TaskProps) => {
       sub_task: [],
     };
 
-    await createTodo(newTask);
+    const createdTask = await createTodo(newTask);
+    
+    if (createdTask) {
+      setList(prevList => [...prevList, createdTask]);
+    }
 
     setUserTask("");
+    setNewTaskName("");
     setModalOpen(false);
+    window.location.reload();
   };
 
+  const fetchTasks = async () => {
+    try {
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        console.error("Auth token not found in localStorage");
+        return;
+      }
 
-  const fetchTasks = () => {
-    const sortedTasks = [...task].sort((a, b) =>
-      new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
-    );
-    if (JSON.stringify(sortedTasks) !== JSON.stringify(list)) {
-      setList(sortedTasks);
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      };
+
+      const response = await axios.get('http://localhost:8000/all-todo', config);
+      if(response.data === null){
+        const sortedTasks = response.data.sort((a: Todo, b: Todo) =>
+          new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+        );
+        setList(sortedTasks);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
     }
-  };  
+  };
 
   useEffect(() => {
     fetchTasks();
-  }, [task]);
+  }, [task]); 
 
   const filterTasksByDate = (tasks: Todo[]) => {
     const now = new Date();
@@ -146,22 +223,12 @@ const UpcomingTask = ({ task }: TaskProps) => {
   };
 
   const handleTaskClick = (clickedTask: Todo) => {
-    console.log('Task clicked:', clickedTask);  
     setSelectedTask(clickedTask);
   };
 
-  const handleCloseTaskManager = () => {
+  const handleCloseTaskManager = async () => {
     setSelectedTask(null);
-    fetchTasks();
-  };
-
-  const getListColor = (listName: string) => {
-    switch (listName.toLowerCase()) {
-      case 'personal': return 'bg-red-200';
-      case 'work': return 'bg-blue-200';
-      case 'shopping': return 'bg-green-200';
-      default: return 'bg-yellow-200';
-    }
+    await fetchTasks();
   };
 
   const TaskItem = ({ task }: { task: Todo }) => {
@@ -176,7 +243,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
               </span>
               {task.list && (
                 <span className={`text-xs px-2 py-1 rounded-md ${getListColor(task.list)}`}>
-                  {task.list}
+                  {getListName(task.list)}
                 </span>
               )}
             </div>
