@@ -173,7 +173,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({
       );
 
       const response = await axios.post(
-        'https://backend-minimal.vercel.app/create-event',
+        'https://todo-backend-sym9.onrender.com/create-event',
         {
           title: eventData.title,
           description: eventData.description,
