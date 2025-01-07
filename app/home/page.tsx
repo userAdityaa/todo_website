@@ -34,9 +34,7 @@ const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const [userSticky, setUserSticky] = useState<TodoNote[]>([]);
   const [list, setList] = useState<Todo[]>([]);
-  const [selectedMenuItem, setSelectedMenuItem] = useState(() => {
-    return localStorage.getItem('selectedMenuItem') || 'Today';
-  });
+  const [selectedMenuItem, setSelectedMenuItem] = useState('Today');
   const [lists, setLists] = useState<List[]>([]);
   const [tags, setTags] = useState(['Tag 1', 'Tag 2']);
   const [isListDialogOpen, setIsListDialogOpen] = useState(false);
@@ -58,16 +56,13 @@ const Home = () => {
     const weekEnd = new Date(today);
     weekEnd.setDate(weekEnd.getDate() + 7);
 
-    // Initialize list counts map
     const listCounts = new Map<string, number>();
 
-    // Count for today's tasks
     const todayCount = todos.filter(todo => {
       const taskDate = new Date(todo.due_date);
       return taskDate >= today && taskDate < tomorrow && !todo.completed;
     }).length;
 
-    // Count for tomorrow's tasks
     const tomorrowCount = todos.filter(todo => {
       const taskDate = new Date(todo.due_date);
       return taskDate >= tomorrow && 
@@ -75,13 +70,11 @@ const Home = () => {
              !todo.completed;
     }).length;
 
-    // Count for this week's tasks (including today and tomorrow)
     const upcomingCount = todos.filter(todo => {
       const taskDate = new Date(todo.due_date);
       return taskDate >= today && taskDate <= weekEnd && !todo.completed;
     }).length;
 
-    // Calculate counts for each list
     todos.forEach(todo => {
       if (todo.list && !todo.completed) {
         listCounts.set(todo.list, (listCounts.get(todo.list) || 0) + 1);
@@ -176,6 +169,15 @@ const Home = () => {
     getUserData();
     fetchLists();
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedMenuItem = localStorage.getItem('selectedMenuItem');
+      if (storedMenuItem) {
+        setSelectedMenuItem(storedMenuItem);
+      }
+    }
+  }, []);  
 
   useEffect(() => {
     localStorage.setItem('selectedMenuItem', selectedMenuItem);
