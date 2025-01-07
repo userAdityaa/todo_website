@@ -41,6 +41,10 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
   const router = useRouter();
 
   useEffect(() => {
+    setSubtasks(todo.sub_task || []);
+  }, [todo.sub_task]);
+
+  useEffect(() => {
     const fetchUserLists = async () => {
       try {
         const token = localStorage.getItem('authToken');
@@ -83,6 +87,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
           'Authorization': `Bearer ${token}`
         }
       });
+      window.location.reload();
       onClose();
     } catch (error) {
       console.error("Error updating task:", error);
