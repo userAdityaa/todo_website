@@ -99,7 +99,7 @@ const Home = () => {
         if (!token) {
           throw new Error('No authentication token found');
         }
-        const response = await axios.get('http://localhost:8000/all-list', {
+        const response = await axios.get('https://backend-minimal.vercel.app/all-list', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ const Home = () => {
     const getUserData = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await axios.get("http://localhost:8000/auth/user", {
+        const response = await axios.get("https://backend-minimal.vercel.app/auth/user", {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ const Home = () => {
     }
     try {
       const response = await axios.post(
-        'http://localhost:8000/create-list',
+        'https://backend-minimal.vercel.app/create-list',
         listData,
         {
           headers: {
@@ -232,7 +232,7 @@ const Home = () => {
       if (!token) {
         throw new Error('No authentication token found');
       }
-      const response = await axios.get('http://localhost:8000/all-list', {
+      const response = await axios.get('https://backend-minimal.vercel.app/all-list', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

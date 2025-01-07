@@ -36,7 +36,7 @@ const useEvents = (): UseEventsReturn => {
   const fetchEvents = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:8000/all-event', {
+      const response = await fetch('https://backend-minimal.vercel.app/all-event', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -423,7 +423,7 @@ const CalendarPage: React.FC = () => {
   const handleSaveEvent = async (eventData: Event) => {
     const token = localStorage.getItem('authToken');
     try {
-      const response = await fetch('http://localhost:8000/create-event', {
+      const response = await fetch('https://backend-minimal.vercel.app/create-event', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

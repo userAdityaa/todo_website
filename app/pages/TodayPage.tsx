@@ -43,7 +43,7 @@ const TodayPage = ({task}: TaskProps) => {
         const uniqueListIds = Array.from(new Set(list.map(item => item.list).filter(Boolean)));
         
         const listDetailsPromises = uniqueListIds.map(listId =>
-          axios.get(`http://localhost:8000/lists/${listId}`, {
+          axios.get(`https://backend-minimal.vercel.app/lists/${listId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -121,7 +121,7 @@ const TodayPage = ({task}: TaskProps) => {
     if (task.completed) {
       try {
         const token = localStorage.getItem('authToken');
-        await axios.delete(`http://localhost:8000/delete-todo/${task.id}`, {
+        await axios.delete(`https://backend-minimal.vercel.app/delete-todo/${task.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -137,7 +137,7 @@ const TodayPage = ({task}: TaskProps) => {
     if (userTask.trim()) {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await axios.post('http://localhost:8000/create-todo', {
+        const response = await axios.post('https://backend-minimal.vercel.app/create-todo', {
           name: userTask.trim(),
           due_date: getEndOfDay(),
         }, {

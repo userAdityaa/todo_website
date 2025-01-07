@@ -16,7 +16,7 @@ const Auth = () => {
 
   const handleLoginIn = async () => { 
     try {
-      window.location.href = "http://localhost:8000/auth/google/login";
+      window.location.href = "https://backend-minimal.vercel.app/auth/google/login";
     } catch (error) {
       console.error('Error during login:', error);
     }

@@ -8,7 +8,7 @@ const AuthCallback = () => {
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('code')
     if (code) {
-      fetch(`http://localhost:8000/auth/google/callback?code=${code}`)
+      fetch(`https://backend-minimal.vercel.app/auth/google/callback?code=${code}`)
         .then(res => res.json())
         .then(data => {
           localStorage.setItem('token', data.token)

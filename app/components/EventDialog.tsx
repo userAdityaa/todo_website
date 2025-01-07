@@ -173,7 +173,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({
       );
 
       const response = await axios.post(
-        'http://localhost:8000/create-event',
+        'https://backend-minimal.vercel.app/create-event',
         {
           title: eventData.title,
           description: eventData.description,

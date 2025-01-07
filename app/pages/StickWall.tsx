@@ -65,7 +65,7 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
 
   const deleteNote = async (noteId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/delete-sticky`, {
+      const response = await fetch(`https://backend-minimal.vercel.app/delete-sticky`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +103,7 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
         ...updates 
       };
   
-      const response = await fetch(`http://localhost:8000/update-sticky`, {
+      const response = await fetch(`https://backend-minimal.vercel.app/update-sticky`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
     setNotes(prevNotes => [...prevNotes, newNote]);
 
     try {
-      const response = await fetch('http://localhost:8000/create-sticky', {
+      const response = await fetch('https://backend-minimal.vercel.app/create-sticky', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
