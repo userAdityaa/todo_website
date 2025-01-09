@@ -3,21 +3,12 @@ import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { Todo } from '../home/page';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
   weight: '400',
 });
-
-interface Todo {
-  id: string;
-  name: string;
-  description: string;
-  list: string;
-  due_date: string;
-  sub_task: string[];
-  completed?: boolean;
-}
 
 interface List {
   id: string;
@@ -29,12 +20,38 @@ interface TaskProps {
   task: Todo[];
 }
 
-const TodayPage = ({task}: TaskProps) => {
-  const router = useRouter();
+const TodayPage = () => {
   const [userTask, setUserTask] = useState<string>("");
   const [list, setList] = useState<Todo[]>([]);
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
   const [listDetails, setListDetails] = useState<Map<string, List>>(new Map());
+
+useEffect(() => {
+  const getUserData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get("http://localhost:8000/auth/user", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true,
+      });
+      let todos: Todo[] = [];
+      if(response.data.todos != null) {
+        todos = response.data.todos.map((todo: Todo) => ({
+          ...todo,
+          completed: false,
+        }));
+        setList(todos);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  getUserData();
+}, []);
 
   useEffect(() => {
     const fetchListDetails = async () => {
@@ -74,16 +91,16 @@ const TodayPage = ({task}: TaskProps) => {
     }
   }, [list]);
 
-  useEffect(() => {
-    if (Array.isArray(task)) {
-      const today = new Date().toISOString().split("T")[0];
-      const todayTasks = task.filter((item) => {
-        const taskDate = new Date(item.due_date).toISOString().split("T")[0];
-        return taskDate === today;
-      });
-      setList(todayTasks);
-    }
-  }, [task]);
+  // useEffect(() => {
+  //   if (Array.isArray(task)) {
+  //     const today = new Date().toISOString().split("T")[0];
+  //     const todayTasks = task.filter((item) => {
+  //       const taskDate = new Date(item.due_date).toISOString().split("T")[0];
+  //       return taskDate === today;
+  //     });
+  //     setList(todayTasks);
+  //   }
+  // }, [task]);
 
   const getListName = (listId: string) => {
     return listDetails.get(listId)?.name || 'Unknown List';
@@ -150,7 +167,6 @@ const TodayPage = ({task}: TaskProps) => {
         const newTask: Todo = response.data;
         setList([...list, newTask]);
         setUserTask("");
-        window.location.reload();
       } catch (error) {
         console.error("Error creating task:", error);
       }

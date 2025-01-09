@@ -143,12 +143,6 @@ const Home = () => {
             ...sticky,
           })));
         }
-        if(response.data.todos != null){
-          setList(response.data.todos.map((todo: Todo) => ({
-            ...todo,
-            completed: false,
-          })));
-        }
 
         const { todayCount, upcomingCount } = calculateCounts(todos);
 
@@ -224,33 +218,6 @@ const Home = () => {
     );
   }, [list]);
 
-  const fetchLists = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      const response = await axios.get('http://localhost:8000/all-list', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.data.message === "No list found for this user") {
-        setLists([]);
-        return;
-      }
-      const fetchedLists = response.data.map((list: List) => ({
-        ...list,
-        count: list.count || 0,
-      }));
-      setLists(fetchedLists);
-    } catch (error) {
-      console.error('Error fetching lists:', error);
-    }
-  };
-
   const handleAddList = async () => {
     if (newListName.trim()) {
       try {
@@ -299,7 +266,7 @@ const Home = () => {
       case 'Upcoming':
         return <UpcomingTask task={list}/>;
       case 'Today':
-        return <TodayPage task={list}/>;
+        return <TodayPage/>;
       case 'Calendar':
         return <CalendarPage />;
       case 'Sticky Wall':
