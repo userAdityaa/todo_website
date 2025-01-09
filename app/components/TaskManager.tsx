@@ -3,27 +3,12 @@ import { Public_Sans } from 'next/font/google';
 import Image from 'next/image';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { List, Todo } from '../home/page';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
   weight: '400',
 });
-
-interface Todo {
-  id: string;
-  name: string;
-  description: string;
-  list: string;
-  due_date: string;
-  sub_task: string[];
-  completed?: boolean;
-}
-
-interface List {
-  id: string;
-  name: string;
-  color: string;
-}
 
 interface TaskManagerProps {
   todo: Todo;
@@ -33,12 +18,31 @@ interface TaskManagerProps {
 const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
   const [description, setDescription] = useState(todo.description);
   const [selectedList, setSelectedList] = useState(todo.list);
-  const [dueDate, setDueDate] = useState(todo.due_date.split('T')[0] || '');
-  const [dueTime, setDueTime] = useState(todo.due_date.split('T')[1] || '');
+  const parseDueDate = (dueDate: string) => {
+    if (!dueDate) return { date: '', time: '' };
+    const [date, timeWithMeridian] = dueDate.split(' ');
+    const [time, meridian] = timeWithMeridian.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (meridian === 'PM' && hours !== '12') {
+      hours = (parseInt(hours, 10) + 12).toString();
+    } else if (meridian === 'AM' && hours === '12') {
+      hours = '00';
+    }
+    return { date, time: `${hours}:${minutes}` };
+  };
+  
+  const { date, time } = parseDueDate(todo.due_date);
+  
+  const [dueDate, setDueDate] = useState(date);
+  const [dueTime, setDueTime] = useState(time);
   const [subtasks, setSubtasks] = useState<string[]>(todo.sub_task);
   const [userLists, setUserLists] = useState<List[]>([]);
   const [error, setError] = useState<string>('');
   const router = useRouter();
+
+  useEffect(() => {
+    console.log(todo);
+  })
 
   useEffect(() => {
     setSubtasks(todo.sub_task || []);

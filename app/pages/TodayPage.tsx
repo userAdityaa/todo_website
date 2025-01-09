@@ -2,19 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
-import { Todo } from '../home/page';
+import { List, Todo } from '../home/page';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
   weight: '400',
 });
 
-interface List {
-  id: string;
-  name: string;
-  color: string;
-}
 
 const TodayPage = () => {
   const [userTask, setUserTask] = useState<string>("");

@@ -17,7 +17,7 @@ export interface Todo {
   completed?: boolean;
 }
 
-interface List {
+export interface List {
   id: string;
   name: string;
   color: string;
