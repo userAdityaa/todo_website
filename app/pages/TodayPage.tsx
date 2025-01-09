@@ -16,17 +16,12 @@ interface List {
   color: string;
 }
 
-interface TaskProps { 
-  task: Todo[];
-}
-
 const TodayPage = () => {
   const [userTask, setUserTask] = useState<string>("");
   const [list, setList] = useState<Todo[]>([]);
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
   const [listDetails, setListDetails] = useState<Map<string, List>>(new Map());
 
-useEffect(() => {
   const getUserData = async () => {
     try {
       const token = localStorage.getItem('authToken');
@@ -50,8 +45,9 @@ useEffect(() => {
     }
   };
 
-  getUserData();
-}, []);
+  useEffect(() => {
+    getUserData();
+  }, []);
 
   useEffect(() => {
     const fetchListDetails = async () => {
@@ -91,17 +87,6 @@ useEffect(() => {
     }
   }, [list]);
 
-  // useEffect(() => {
-  //   if (Array.isArray(task)) {
-  //     const today = new Date().toISOString().split("T")[0];
-  //     const todayTasks = task.filter((item) => {
-  //       const taskDate = new Date(item.due_date).toISOString().split("T")[0];
-  //       return taskDate === today;
-  //     });
-  //     setList(todayTasks);
-  //   }
-  // }, [task]);
-
   const getListName = (listId: string) => {
     return listDetails.get(listId)?.name || 'Unknown List';
   };
@@ -129,25 +114,21 @@ useEffect(() => {
   };
 
   const toggleTaskCompletion = async (index: number) => {
-    const updatedList = list.map((item, i) =>
-      i === index ? { ...item, completed: !item.completed } : item
-    );
-    setList(updatedList);
-
-    const task = updatedList[index];
-    if (task.completed) {
+      const taskToRemove = list[index];
       try {
         const token = localStorage.getItem('authToken');
-        await axios.delete(`http://localhost:8000/delete-todo/${task.id}`, {
+        await axios.delete(`http://localhost:8000/delete-todo/${taskToRemove.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
+    
+        const updatedList = list.filter((_, i) => i !== index);
+        setList(updatedList);
       } catch (error) {
-        console.error("Error deleting task:", error);
+        console.error("Error removing task:", error);
       }
-    }
   };
 
   const handleAddTask = async () => {
