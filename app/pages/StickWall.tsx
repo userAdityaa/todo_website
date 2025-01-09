@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import axios from 'axios';
 
 export interface TodoNote {
   id: string;
@@ -179,23 +180,21 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
     setNotes(prevNotes => [...prevNotes, newNote]);
 
     try {
-      const response = await fetch('http://localhost:8000/create-sticky', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify(newNote),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create sticky: ${response.statusText}`);
-      }
-
-      const createdNote = await response.json();
-      
-      setNotes(prevNotes => 
-        prevNotes.map(note => 
+      const response = await axios.post(
+        'http://localhost:8000/create-sticky',
+        newNote, 
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        }
+      );
+    
+      const createdNote = response.data;
+    
+      setNotes(prevNotes =>
+        prevNotes.map(note =>
           note.id === newNote.id ? { ...note, ...createdNote } : note
         )
       );
@@ -203,6 +202,7 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
       console.error('Error creating sticky:', error);
       setNotes(prevNotes => prevNotes.filter(note => note.id !== newNote.id));
     }
+    
   };
 
   useEffect(() => {
