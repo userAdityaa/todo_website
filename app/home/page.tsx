@@ -99,7 +99,7 @@ const Home = () => {
         if (!token) {
           throw new Error('No authentication token found');
         }
-        const response = await axios.get('https://todo-backend-sym9.onrender.com/all-list', {
+        const response = await axios.get('http://localhost:8000/all-list', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ const Home = () => {
     const getUserData = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await axios.get("https://todo-backend-sym9.onrender.com/auth/user", {
+        const response = await axios.get("http://localhost:8000/auth/user", {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ const Home = () => {
     }
     try {
       const response = await axios.post(
-        'https://todo-backend-sym9.onrender.com/create-list',
+        'http://localhost:8000/create-list',
         listData,
         {
           headers: {
@@ -208,7 +208,6 @@ const Home = () => {
 
   useEffect(() => {
     const { todayCount, upcomingCount, listCounts } = calculateCounts(list);
-
     setMenuItems(prevItems => 
       prevItems.map(item => ({
         ...item,
@@ -217,7 +216,6 @@ const Home = () => {
                item.count
       }))
     );
-
     setLists(prevLists => 
       prevLists.map(list => ({
         ...list,
@@ -232,12 +230,13 @@ const Home = () => {
       if (!token) {
         throw new Error('No authentication token found');
       }
-      const response = await axios.get('https://todo-backend-sym9.onrender.com/all-list', {
+      const response = await axios.get('http://localhost:8000/all-list', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
+
       if (response.data.message === "No list found for this user") {
         setLists([]);
         return;
@@ -259,8 +258,16 @@ const Home = () => {
           name: newListName,
           color: selectedColor,
         };
-        await createList(listData);
-        await fetchLists();
+        const response = await createList(listData);
+        
+        const createdList = {
+          id: response.id,
+          name: newListName,
+          color: selectedColor,
+          count: 0
+        };
+        
+        setLists(prevLists => [...prevLists, createdList]);
         setNewListName('');
         setSelectedColor('bg-red-300');
         setIsListDialogOpen(false);
@@ -269,7 +276,7 @@ const Home = () => {
       }
     }
   };
-
+  
   const handleAddTag = () => {
     if (newTag.trim()) {
       setTags([...tags, newTag.trim()]);
@@ -446,8 +453,8 @@ const Home = () => {
               <section>
                 <h2 className="text-sm font-semibold text-zinc-500 mb-2">LISTS</h2>
                 <div className="space-y-1">
-                  {lists.map((list) => (
-                    <button key={list.name} className="w-full flex items-center justify-between p-2">
+                {lists.map((list) => (
+                    <button key={list.id} className="w-full flex items-center justify-between p-2">
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded ${list.color}`} />
                         <span className="text-zinc-700">{list.name}</span>

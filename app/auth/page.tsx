@@ -2,7 +2,6 @@
 import React from 'react'
 import Image from 'next/image';
 import { Shanti } from "next/font/google";
-import axios from 'axios'
 import { useRouter } from 'next/navigation';
 
 const shanti = Shanti({
@@ -16,7 +15,7 @@ const Auth = () => {
 
   const handleLoginIn = async () => { 
     try {
-      window.location.href = "https://todo-backend-sym9.onrender.com/auth/google/login";
+      window.location.href = "http://localhost:8000/auth/google/login";
     } catch (error) {
       console.error('Error during login:', error);
     }

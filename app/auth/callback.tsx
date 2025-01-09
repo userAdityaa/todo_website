@@ -9,7 +9,7 @@ const AuthCallback = () => {
     const code = new URLSearchParams(window.location.search).get("code");
     if (code) {
       fetch(
-        `https://todo-backend-sym9.onrender.com/auth/google/callback?code=${code}`
+        `http://localhost:8000/auth/google/callback?code=${code}`
       )
         .then((res) => res.json())
         .then((data) => {

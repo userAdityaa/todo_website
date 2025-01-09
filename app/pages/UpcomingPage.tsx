@@ -44,7 +44,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
         const uniqueListIds = Array.from(new Set(list.map(item => item.list).filter(Boolean)));
         
         const listDetailsPromises = uniqueListIds.map(listId =>
-          axios.get(`https://todo-backend-sym9.onrender.com/lists/${listId}`, {
+          axios.get(`http://localhost:8000/lists/${listId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -96,7 +96,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
         },
       };
   
-      const response = await axios.post('https://todo-backend-sym9.onrender.com/create-todo', formattedTodoData, config);
+      const response = await axios.post('http://localhost:8000/create-todo', formattedTodoData, config);
       return response.data;
     } catch (error) {
       console.error("Error creating a new task", error);
@@ -169,7 +169,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
         },
       };
 
-      const response = await axios.get('https://todo-backend-sym9.onrender.com/all-todo', config);
+      const response = await axios.get('http://localhost:8000/all-todo', config);
       if(response.data === null){
         const sortedTasks = response.data.sort((a: Todo, b: Todo) =>
           new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
