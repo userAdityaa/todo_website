@@ -4,6 +4,7 @@ import Image from 'next/image';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { List, Todo } from '../home/page';
+import { format } from 'date-fns';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
@@ -75,15 +76,18 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
   const handleSaveChanges = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const combinedDateTime = dueDate && dueTime
-        ? `${dueDate}T${dueTime}`
-        : '';
-
+      let formattedDateTime = '';
+  
+      if (dueDate && dueTime) {
+        const date = new Date(`${dueDate}T${dueTime}`);
+        formattedDateTime = format(date, 'yyyy-MM-dd hh:mm a');
+      }
+  
       await axios.put(`http://localhost:8000/update-todo/${todo.id}`, {
         name: todo.name,
         description,
         list: selectedList,
-        due_date: combinedDateTime,
+        due_date: formattedDateTime,
         sub_task: subtasks,
       }, {
         headers: {
