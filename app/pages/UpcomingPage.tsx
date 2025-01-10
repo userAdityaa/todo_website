@@ -242,7 +242,7 @@ const UpcomingTask = () => {
 
   const handleCloseTaskManager = async () => {
     setSelectedTask(null);
-    await fetchTasks();
+    await getUserData();
   };
 
   const TaskItem = ({ task }: { task: Todo }) => {
