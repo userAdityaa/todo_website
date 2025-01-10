@@ -3,39 +3,52 @@ import { Public_Sans } from 'next/font/google';
 import TaskManager from '../components/TaskManager';
 import axios from 'axios';
 import { DateSelectionModal } from '../components';
+import { List, Todo } from '../home/page';
+import { format } from 'date-fns';
 
 const public_sans = Public_Sans({
   subsets: ['latin'],
   weight: '400',
 });
 
-interface Todo {
-  id: string;
-  name: string;
-  description: string;
-  list: string;
-  due_date: string;
-  sub_task: string[];
-  completed?: boolean;
-}
-
-interface List {
-  id: string;
-  name: string;
-  color: string;
-}
-
 interface TaskProps {
   task: Todo[];
 }
 
-const UpcomingTask = ({ task }: TaskProps) => {
+const UpcomingTask = () => {
   const [userTask, setUserTask] = useState("");
   const [list, setList] = useState<Todo[]>([]);
   const [selectedTask, setSelectedTask] = useState<Todo | null>(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [newTaskName, setNewTaskName] = useState("");
   const [listDetails, setListDetails] = useState<Map<string, List>>(new Map());
+
+  const getUserData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get("http://localhost:8000/auth/user", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true,
+      });
+      let todos: Todo[] = [];
+      if(response.data.todos != null) {
+        todos = response.data.todos.map((todo: Todo) => ({
+          ...todo,
+          completed: false,
+        }));
+        setList(todos);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  useEffect(() => {
+    getUserData();
+  }, []);
 
   useEffect(() => {
     const fetchListDetails = async () => {
@@ -119,7 +132,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
   const handleAddTask = async (category: "today" | "tomorrow" | "thisWeek") => {
     const now = new Date();
     let dueDate: Date;
-
+  
     if (category === "today") {
       dueDate = new Date(now);
     } else if (category === "tomorrow") {
@@ -127,13 +140,15 @@ const UpcomingTask = ({ task }: TaskProps) => {
       dueDate.setDate(now.getDate() + 1);
     } else {
       dueDate = new Date(now);
-      const todayDayIndex = now.getDay(); 
+      const todayDayIndex = now.getDay();
       const daysUntilSaturday = 6 - todayDayIndex;
-      dueDate.setDate(now.getDate() + daysUntilSaturday); 
+      dueDate.setDate(now.getDate() + daysUntilSaturday);
     }
-
-    const formattedDueDate = new Date(dueDate).toISOString().slice(0, 16);
-
+  
+    dueDate.setHours(23, 59, 0, 0);
+  
+    const formattedDueDate = format(dueDate, 'yyyy-MM-dd hh:mm a');
+  
     const newTask = {
       id: '',
       name: newTaskName,
@@ -142,17 +157,16 @@ const UpcomingTask = ({ task }: TaskProps) => {
       due_date: formattedDueDate,
       sub_task: [],
     };
-
+  
     const createdTask = await createTodo(newTask);
     
     if (createdTask) {
       setList(prevList => [...prevList, createdTask]);
     }
-
+  
     setUserTask("");
     setNewTaskName("");
     setModalOpen(false);
-    window.location.reload();
   };
 
   const fetchTasks = async () => {
@@ -183,7 +197,7 @@ const UpcomingTask = ({ task }: TaskProps) => {
 
   useEffect(() => {
     fetchTasks();
-  }, [task]); 
+  }, [list]); 
 
   const filterTasksByDate = (tasks: Todo[]) => {
     const now = new Date();

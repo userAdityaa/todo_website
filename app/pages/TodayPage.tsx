@@ -26,12 +26,23 @@ const TodayPage = () => {
         },
         withCredentials: true,
       });
+  
       let todos: Todo[] = [];
-      if(response.data.todos != null) {
-        todos = response.data.todos.map((todo: Todo) => ({
-          ...todo,
-          completed: false,
-        }));
+      if (response.data.todos != null) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+  
+        todos = response.data.todos
+          .filter((todo: Todo) => {
+            const dueDate = new Date(todo.due_date);
+            dueDate.setHours(0, 0, 0, 0);
+            return dueDate.getTime() === today.getTime();
+          })
+          .map((todo: Todo) => ({
+            ...todo,
+            completed: false,
+          }));
+  
         setList(todos);
       }
     } catch (error) {
