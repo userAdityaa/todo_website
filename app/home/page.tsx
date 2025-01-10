@@ -264,13 +264,13 @@ const Home = () => {
   const renderContent = () => {
     switch (selectedMenuItem) {
       case 'Upcoming':
-        return <UpcomingTask task={list}/>;
+        return <UpcomingTask/>;
       case 'Today':
         return <TodayPage/>;
       case 'Calendar':
         return <CalendarPage />;
       case 'Sticky Wall':
-        return <StickyWall initialNotes={userSticky}/>;
+        return <StickyWall/>;
       default:
         return null;
     }

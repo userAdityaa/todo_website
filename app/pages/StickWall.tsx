@@ -46,10 +46,35 @@ const AutoResizeTextArea = ({ value, onChange, className }: {
   );
 };
 
-const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
+const StickyWall: React.FC<Props> = () => {
   const [notes, setNotes] = useState<TodoNote[]>([]);
+  const [initialNotes, setInitialNotes] = useState<TodoNote[]>([]);
   const [localUpdates, setLocalUpdates] = useState<{ [key: string]: { topic?: string; content?: string } }>({});
   const updateTimeoutRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
+
+  const getUserData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get("http://localhost:8000/auth/user", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true,
+      });
+      if(response.data.sticky != null) {
+        setInitialNotes(response.data.sticky.map((sticky: TodoNote) => ({
+          ...sticky,
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  useEffect(() => { 
+    getUserData();
+  }, []);
 
   useEffect(() => {
     if (initialNotes && initialNotes.length > 0) {
@@ -202,7 +227,6 @@ const StickyWall: React.FC<Props> = ({ initialNotes = [] }) => {
       console.error('Error creating sticky:', error);
       setNotes(prevNotes => prevNotes.filter(note => note.id !== newNote.id));
     }
-    
   };
 
   useEffect(() => {
