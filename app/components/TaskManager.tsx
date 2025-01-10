@@ -26,7 +26,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
     let [hours, minutes] = time.split(':');
     if (meridian === 'PM' && hours !== '12') {
       hours = (parseInt(hours, 10) + 12).toString();
-    } else if (meridian === 'AM' && hours === '12') {
+    } else if (meridian === 'PM' && hours === '12') {
       hours = '00';
     }
     return { date, time: `${hours}:${minutes}` };
@@ -95,7 +95,6 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
           'Authorization': `Bearer ${token}`
         }
       });
-      window.location.reload();
       onClose();
     } catch (error) {
       console.error("Error updating task:", error);
@@ -123,7 +122,6 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
         }
       });
       onClose();
-      router.push("/home");
     } catch (error) {
       console.error("Error deleting task:", error);
       setError('Failed to delete task');

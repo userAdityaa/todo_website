@@ -161,7 +161,7 @@ const TodayPage = () => {
 
   const handleCloseTaskManager = () => {
     setSelectedTask(null);
-    window.location.reload();
+    getUserData();
   };
 
   const formatDate = (dateString: string) => {
