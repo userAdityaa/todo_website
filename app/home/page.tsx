@@ -99,7 +99,7 @@ const Home = () => {
         if (!token) {
           throw new Error('No authentication token found');
         }
-        const response = await axios.get('http://localhost:8000/all-list', {
+        const response = await axios.get('https://todo-backend-sym9.onrender.com/all-list', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ const Home = () => {
     const getUserData = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await axios.get("http://localhost:8000/auth/user", {
+        const response = await axios.get("https://todo-backend-sym9.onrender.com/auth/user", {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -184,7 +184,7 @@ const Home = () => {
     }
     try {
       const response = await axios.post(
-        'http://localhost:8000/create-list',
+        'https://todo-backend-sym9.onrender.com/create-list',
         listData,
         {
           headers: {

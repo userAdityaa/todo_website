@@ -55,7 +55,7 @@ const StickyWall: React.FC<Props> = () => {
   const getUserData = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await axios.get("http://localhost:8000/auth/user", {
+      const response = await axios.get("https://todo-backend-sym9.onrender.com/auth/user", {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ const StickyWall: React.FC<Props> = () => {
 
   const deleteNote = async (noteId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/delete-sticky`, {
+      const response = await fetch(`https://todo-backend-sym9.onrender.com/delete-sticky`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ const StickyWall: React.FC<Props> = () => {
         ...updates 
       };
   
-      const response = await fetch(`http://localhost:8000/update-sticky`, {
+      const response = await fetch(`https://todo-backend-sym9.onrender.com/update-sticky`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ const StickyWall: React.FC<Props> = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:8000/create-sticky',
+        'https://todo-backend-sym9.onrender.com/create-sticky',
         newNote, 
         {
           headers: {

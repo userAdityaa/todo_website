@@ -53,7 +53,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
     const fetchUserLists = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await axios.get('http://localhost:8000/all-list', {
+        const response = await axios.get('https://todo-backend-sym9.onrender.com/all-list', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -83,7 +83,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
         formattedDateTime = format(date, 'yyyy-MM-dd hh:mm a');
       }
   
-      await axios.put(`http://localhost:8000/update-todo/${todo.id}`, {
+      await axios.put(`https://todo-backend-sym9.onrender.com/update-todo/${todo.id}`, {
         name: todo.name,
         description,
         list: selectedList,
@@ -115,7 +115,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ todo, onClose }) => {
   const handleDeleteTask = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      await axios.delete(`http://localhost:8000/delete-todo/${todo.id}`, {
+      await axios.delete(`https://todo-backend-sym9.onrender.com/delete-todo/${todo.id}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`

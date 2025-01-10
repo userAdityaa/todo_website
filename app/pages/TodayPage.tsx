@@ -19,7 +19,7 @@ const TodayPage = () => {
   const getUserData = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await axios.get("http://localhost:8000/auth/user", {
+      const response = await axios.get("https://todo-backend-sym9.onrender.com/auth/user", {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ const TodayPage = () => {
         const uniqueListIds = Array.from(new Set(list.map(item => item.list).filter(Boolean)));
         
         const listDetailsPromises = uniqueListIds.map(listId =>
-          axios.get(`http://localhost:8000/lists/${listId}`, {
+          axios.get(`https://todo-backend-sym9.onrender.com/lists/${listId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -122,7 +122,7 @@ const TodayPage = () => {
       const taskToRemove = list[index];
       try {
         const token = localStorage.getItem('authToken');
-        await axios.delete(`http://localhost:8000/delete-todo/${taskToRemove.id}`, {
+        await axios.delete(`https://todo-backend-sym9.onrender.com/delete-todo/${taskToRemove.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -140,7 +140,7 @@ const TodayPage = () => {
     if (userTask.trim()) {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await axios.post('http://localhost:8000/create-todo', {
+        const response = await axios.post('https://todo-backend-sym9.onrender.com/create-todo', {
           name: userTask.trim(),
           due_date: getEndOfDay(),
         }, {
