@@ -26,7 +26,7 @@ const UpcomingTask = () => {
   const getUserData = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await axios.get("https://todo-backend-sym9.onrender.com/auth/user", {
+      const response = await axios.get("https://backend-minimal.vercel.app/auth/user", {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -57,7 +57,7 @@ const UpcomingTask = () => {
         const uniqueListIds = Array.from(new Set(list.map(item => item.list).filter(Boolean)));
         
         const listDetailsPromises = uniqueListIds.map(listId =>
-          axios.get(`https://todo-backend-sym9.onrender.com/lists/${listId}`, {
+          axios.get(`https://backend-minimal.vercel.app/lists/${listId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -109,7 +109,7 @@ const UpcomingTask = () => {
         },
       };
   
-      const response = await axios.post('https://todo-backend-sym9.onrender.com/create-todo', formattedTodoData, config);
+      const response = await axios.post('https://backend-minimal.vercel.app/create-todo', formattedTodoData, config);
       return response.data;
     } catch (error) {
       console.error("Error creating a new task", error);
@@ -183,7 +183,7 @@ const UpcomingTask = () => {
         },
       };
 
-      const response = await axios.get('https://todo-backend-sym9.onrender.com/all-todo', config);
+      const response = await axios.get('https://backend-minimal.vercel.app/all-todo', config);
       if(response.data === null){
         const sortedTasks = response.data.sort((a: Todo, b: Todo) =>
           new Date(a.due_date).getTime() - new Date(b.due_date).getTime()

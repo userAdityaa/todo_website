@@ -15,7 +15,7 @@ const Auth = () => {
 
   const handleLoginIn = async () => { 
     try {
-      window.location.href = "https://todo-backend-sym9.onrender.com/auth/google/login";
+      window.location.href = "https://backend-minimal.vercel.app/auth/google/login";
     } catch (error) {
       console.error('Error during login:', error);
     }

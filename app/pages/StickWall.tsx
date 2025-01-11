@@ -55,7 +55,7 @@ const StickyWall: React.FC<Props> = () => {
   const getUserData = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await axios.get("https://todo-backend-sym9.onrender.com/auth/user", {
+      const response = await axios.get("https://backend-minimal.vercel.app/auth/user", {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ const StickyWall: React.FC<Props> = () => {
 
   const deleteNote = async (noteId: string) => {
     try {
-      const response = await fetch(`https://todo-backend-sym9.onrender.com/delete-sticky`, {
+      const response = await fetch(`https://backend-minimal.vercel.app/delete-sticky`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ const StickyWall: React.FC<Props> = () => {
         ...updates 
       };
   
-      const response = await fetch(`https://todo-backend-sym9.onrender.com/update-sticky`, {
+      const response = await fetch(`https://backend-minimal.vercel.app/update-sticky`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ const StickyWall: React.FC<Props> = () => {
 
     try {
       const response = await axios.post(
-        'https://todo-backend-sym9.onrender.com/create-sticky',
+        'https://backend-minimal.vercel.app/create-sticky',
         newNote, 
         {
           headers: {
